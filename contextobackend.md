@@ -434,3 +434,15 @@
      - `PATCH /api/v1/tenants/:id`: Atualiza `agendaConfig` e `whatsappHoursConfig`.
      - `GET /api/v1/tenants/:id/queue`: Lista itens da fila noturna.
      - `POST /api/v1/tenants/:id/queue/process`: Dispara o processamento imediato da fila.
+
+
+### Fase 24: Versionamento Git & Vínculo com Repositório Remoto (Concluída - 2026-11-08)
+- **Configuração do Git no Workspace:**
+  - Baixado e configurado o binário portátil do Git (`.git-bin/`) preservado e ignorado pelo `.gitignore`.
+  - Criado o arquivo [`.gitignore`](file:///c:/_dev/atendimento_whatsapp/.gitignore) para proteger e impedir o commit de: `node_modules/`, credenciais e banco de dados SQLite (`data/`, `*.sqlite*`), chaves e variáveis sensíveis (`.env`, `.env.local`), binários temporários (`.git-bin/`) e pastas de teste (`scratch/`).
+- **Repositório Remoto Vinculado & Push Inicial:**
+  - Inicializado o repositório Git na branch principal `main`.
+  - Configurado o remote origin: `https://github.com/dmessiasb/ai-assistent-business.git`.
+  - Realizado o commit inicial com 23 arquivos do projeto estruturados.
+  - Executado com sucesso o push para a branch `main` em `origin`:
+    - `https://github.com/dmessiasb/ai-assistent-business.git`
