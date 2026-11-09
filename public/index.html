@@ -1,0 +1,1522 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SmartRecords & WhatsApp AI Hub — Painel Administrativo Multi-Empresa</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex font-sans antialiased">
+
+  <!-- ====================================================================== -->
+  <!-- SIDEBAR DE NAVEGAÇÃO LATERAL (ARQUITETURA MULTI-MÓDULO)                -->
+  <!-- ====================================================================== -->
+  <aside class="w-64 bg-slate-900 border-r border-slate-800 flex flex-col justify-between shrink-0 min-h-screen sticky top-0">
+    <div>
+      <!-- Logo / Marca -->
+      <div class="px-5 py-5 border-b border-slate-800 flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold text-lg">
+          ⚡
+        </div>
+        <div>
+          <div class="font-bold text-sm text-white tracking-tight">SmartRecords Hub</div>
+          <div class="text-[11px] text-slate-400">SaaS Multi-Empresa & IA</div>
+        </div>
+      </div>
+
+      <!-- Menu de Módulos -->
+      <div class="px-3 py-4 space-y-1 text-xs">
+        <div class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+          Operação da Clínica
+        </div>
+        <button onclick="switchTab('prancheta')" id="nav-prancheta" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-left transition">
+          <span>📋</span> Prancheta Digital
+        </button>
+        <button onclick="switchTab('relatorio')" id="nav-relatorio" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-left transition">
+          <span>📊</span> Relatório do Negócio
+        </button>
+        <button onclick="switchTab('ficha-viva')" id="nav-ficha-viva" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-left transition">
+          <span>🔄</span> Ficha Viva (Pós-Sessão)
+        </button>
+
+        <div class="px-3 pt-4 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+          Configuração por Empresa
+        </div>
+        <button onclick="switchTab('empresas')" id="nav-empresas" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-left transition">
+          <span>🏢</span> Empresas & Credenciais
+        </button>
+        <button onclick="switchTab('skills')" id="nav-skills" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-left transition">
+          <span>🛡️</span> Skill & Guardrails IA
+        </button>
+        <button onclick="switchTab('whatsapp')" id="nav-whatsapp" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-left transition">
+          <span>📱</span> Conexões WhatsApp
+        </button>
+
+        <div class="px-3 pt-4 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+          Ecossistema & Testes
+        </div>
+        <button onclick="switchTab('integracoes')" id="nav-integracoes" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-left transition">
+          <span>🔌</span> Webhooks & Simulador
+        </button>
+      </div>
+    </div>
+
+    <!-- Rodapé da Sidebar: Status de Recursos -->
+    <div class="p-4 border-t border-slate-800 bg-slate-950/50 text-[11px] space-y-1.5">
+      <div id="sidebar-health" class="text-slate-400">Verificando servidor...</div>
+      <div class="text-slate-500">Otimizado para GCP e2-micro</div>
+    </div>
+  </aside>
+
+  <!-- ====================================================================== -->
+  <!-- ÁREA PRINCIPAL (TOPBAR + TELAS SEPARADAS)                              -->
+  <!-- ====================================================================== -->
+  <div class="flex-1 flex flex-col min-w-0">
+
+    <!-- TOPBAR GLOBAL COM SELETOR DE EMPRESA ATIVA -->
+    <header class="bg-slate-900/90 border-b border-slate-800 px-8 py-4 sticky top-0 z-10 backdrop-blur flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center gap-4">
+        <div>
+          <label class="block text-[10px] uppercase tracking-wider font-bold text-slate-400">
+            🏢 Empresa Ativa no Painel
+          </label>
+          <div class="flex items-center gap-2 mt-0.5">
+            <select id="global-tenant-select" onchange="onSelectTenant(this.value)" class="bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-sm font-semibold text-emerald-400 focus:outline-none focus:border-emerald-500"></select>
+            <button onclick="openNewTenantModal()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-2.5 py-1.5 rounded-lg border border-slate-700 transition">
+              + Nova Empresa
+            </button>
+          </div>
+        </div>
+        <div id="active-tenant-badges" class="hidden md:flex items-center gap-2 text-xs pl-3 border-l border-slate-800"></div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <a id="btn-print-pdf" href="/api/v1/tenants/tenant_demo_estetica/print-preview" target="_blank" class="text-xs bg-teal-600 hover:bg-teal-500 text-white px-3.5 py-2 rounded-lg font-semibold transition flex items-center gap-1.5">
+          <span>🖨️</span> Bloco Físico + QR Code
+        </a>
+      </div>
+    </header>
+
+    <!-- CONTEÚDO DAS TELAS -->
+    <main class="p-8 max-w-6xl w-full mx-auto space-y-6">
+
+      <!-- ================================================================== -->
+      <!-- TELA 1: PRANCHETA DIGITAL (OPERAÇÃO DO PROFISSIONAL)               -->
+      <!-- ================================================================== -->
+      <section id="view-prancheta" class="tab-view space-y-6">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h1 class="text-xl font-bold text-white">📋 Prancheta Digital de Atendimento</h1>
+            <p class="text-xs text-slate-400 mt-0.5">
+              Fichas preenchidas automaticamente pela conversa natural no WhatsApp, alertas clínicos e histórico de sessões.
+            </p>
+          </div>
+          <button onclick="loadAll()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-2 rounded-lg border border-slate-700">
+            🔄 Atualizar Prancheta
+          </button>
+        </div>
+
+        <!-- KPIs da Empresa Ativa -->
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-4" id="prancheta-kpis"></div>
+
+        <!-- Lista de Fichas -->
+        <div id="records-list" class="space-y-4"></div>
+      </section>
+
+      <!-- ================================================================== -->
+      <!-- TELA 2: EMPRESAS & CREDENCIAIS (CHAVE IA + WHATSAPP + SEGURANÇA)   -->
+      <!-- ================================================================== -->
+      <section id="view-empresas" class="tab-view hidden space-y-6">
+        <div>
+          <h1 class="text-xl font-bold text-white">🏢 Perfil da Empresa, Chaves de IA & Segurança</h1>
+          <p class="text-xs text-slate-400 mt-0.5">
+            Configure a Chave do Gemini, a Instância do WhatsApp, o Nicho e a Trava de Segurança exclusivamente para a empresa selecionada.
+          </p>
+        </div>
+
+        <form onsubmit="saveCompanyProfile(event)" class="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-6 text-xs">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div>
+              <label class="block text-slate-300 font-semibold mb-1.5">Nome da Empresa / Clínica</label>
+              <input id="emp-name" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm" />
+            </div>
+            <div>
+              <label class="block text-slate-300 font-semibold mb-1.5">Nicho / Modelo de Ficha (`VerticalPreset`)</label>
+              <select id="emp-preset" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm"></select>
+            </div>
+          </div>
+
+          <div class="border-t border-slate-800 pt-5">
+            <h3 class="text-sm font-bold text-indigo-400 mb-3">🔑 Credenciais de Inteligência Artificial (Exclusivas desta Empresa)</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div class="md:col-span-2">
+                <label class="block text-slate-300 font-semibold mb-1">
+                  Chave da API Gemini (`AIzaSy...` do AI Studio ou `AQ....` do Vertex AI)
+                </label>
+                <input id="emp-ai-key" placeholder="Cole a chave Gemini exclusiva desta empresa..." class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-emerald-300 font-mono" />
+                <p class="text-[11px] text-slate-500 mt-1">
+                  Usada para transcrever áudios (`.ogg`), ler fotos de fichas e extrair respostas desta empresa.
+                </p>
+              </div>
+              <div>
+                <label class="block text-slate-300 font-semibold mb-1">Modelo Gemini</label>
+                <select id="emp-ai-model" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white">
+                  <option value="gemini-3.8-flash">gemini-3.8-flash (Recomendado - Transcrição & Áudio)</option>
+                  <option value="gemini-flash-latest">gemini-flash-latest</option>
+                  <option value="gemini-2.5-flash-lite">gemini-2.5-flash-lite (Ultra Rápido)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="border-t border-slate-800 pt-5">
+            <h3 class="text-sm font-bold text-emerald-400 mb-3">📱 Vínculo de WhatsApp & Segurança de Mensagens</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label class="block text-slate-300 font-semibold mb-1">Instância de WhatsApp da Empresa</label>
+                <select id="emp-wa-instance" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white"></select>
+              </div>
+              <div>
+                <label class="block text-slate-300 font-semibold mb-1">WhatsApp da Profissional (Modo Ditado)</label>
+                <input id="emp-owner-phone" placeholder="Ex: 5541991769268" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white" />
+              </div>
+              <div>
+                <label class="block text-slate-300 font-semibold mb-1">Modo de Segurança do Atendimento</label>
+                <select id="emp-sec-mode" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-amber-300 font-semibold">
+                  <option value="TEST_WHITELIST">🔒 Modo Teste (Apenas Contatos Autorizados)</option>
+                  <option value="PRODUCTION_ALL">🌐 Modo Produção (Atender Todos os Clientes)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="mt-4">
+              <label class="block text-slate-300 font-semibold mb-1">
+                Contatos Autorizados no Modo Teste (separados por vírgula — Nome, Telefone ou JID `@lid`)
+              </label>
+              <input id="emp-allowed-jids" placeholder="Ex: 237327075004656@lid, ricardo, 5511988887777" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono" />
+              <p class="text-[11px] text-slate-500 mt-1">
+                Enquanto estiver em <b>Modo Teste</b>, o assistente ignorará 100% de outras conversas e responderá apenas a quem estiver listado aqui.
+              </p>
+            </div>
+          </div>
+
+          <div class="border-t border-slate-800 pt-5">
+            <h3 class="text-sm font-bold text-amber-400 mb-3">💸 Configuração de Chave Pix & Sinal para Agendamento</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label class="block text-slate-300 font-semibold mb-1">Exigir Sinal para Confirmar Horário?</label>
+                <select id="emp-require-pix" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-amber-300 font-semibold">
+                  <option value="0">✅ Não exigir sinal (Agendar direto)</option>
+                  <option value="1">💸 Sim — Exigir Sinal via Pix (Confirmar só após Profissional aprovar)</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-slate-300 font-semibold mb-1">Chave Pix da Empresa (CPF, CNPJ, Celular, E-mail ou Aleatória)</label>
+                <input id="emp-pix-key" placeholder="Ex: 41991769268 ou pix@adenmassoterapia.com.br" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono" />
+              </div>
+            <div>
+              <label class="block text-slate-300 font-semibold mb-1">Valor ou Percentual do Sinal</label>
+              <input id="emp-down-payment-info" oninput="renderServicesEditorTable()" placeholder="Ex: 30% do valor da sessão ou R$ 50,00" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white" />
+            </div>
+          </div>
+          <p class="text-[11px] text-slate-400 mt-2">
+            🔒 <b>Regra de Segurança:</b> Quando ativado, o sistema converte automaticamente o percentual no valor em Reais do serviço escolhido (<b>sempre arredondado</b>) e envia a Chave Pix ao cliente. O agendamento <b>só é efetivado quando você/profissional confirmar o pagamento</b> (em 1 clique na Prancheta Digital ou enviando <code>#confirmar Nome</code> no WhatsApp).
+          </p>
+        </div>
+
+        <div class="border-t border-slate-800 pt-5">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <div>
+              <h3 class="text-sm font-bold text-emerald-400">💆‍♀️ Cadastro de Serviços, Valores & Cálculo Automático do Sinal (Arredondado)</h3>
+              <p class="text-[11px] text-slate-400">
+                Cadastre os procedimentos pelo Painel abaixo ou pelo próprio WhatsApp da profissional (basta enviar áudio ou texto: <i>"Quero cadastrar o serviço Nome por X reais Y minutos"</i> ou <code>#servicos</code>).
+              </p>
+            </div>
+            <button type="button" onclick="addServiceRow()" class="bg-emerald-700/40 hover:bg-emerald-600/60 border border-emerald-500/40 text-emerald-200 text-xs font-semibold px-3.5 py-1.5 rounded-lg transition">
+              + Adicionar Serviço
+            </button>
+          </div>
+
+          <div class="overflow-x-auto bg-slate-950 border border-slate-800 rounded-xl p-3">
+            <table class="w-full text-left text-xs">
+              <thead>
+                <tr class="text-slate-400 border-b border-slate-800">
+                  <th class="pb-2 pr-2">Nome do Serviço / Procedimento</th>
+                  <th class="pb-2 px-2 w-28">Duração (min)</th>
+                  <th class="pb-2 px-2 w-32">Valor Avulso (R$)</th>
+                  <th class="pb-2 px-2 w-36">Valor Pacote 4x (R$)</th>
+                  <th class="pb-2 px-2 w-44">Sinal Calculado (Arredondado)</th>
+                  <th class="pb-2 pl-2 w-16 text-right">Ação</th>
+                </tr>
+              </thead>
+              <tbody id="emp-services-tbody" class="divide-y divide-slate-900"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ================================================================== -->
+        <!-- CONFIGURAÇÃO DA AGENDA DA MACA / DIAS E HORÁRIOS COM INTERVALO/BUFFER -->
+        <!-- ================================================================== -->
+        <div class="border-t border-slate-800 pt-5">
+          <div class="mb-3">
+            <h3 class="text-sm font-bold text-sky-400">🗓️ Dias e Horários de Atendimento na Maca (Agenda Física)</h3>
+            <p class="text-[11px] text-slate-400">
+              Configure em quais dias e horários você realiza atendimentos presenciais, o intervalo de almoço e o <b>buffer obrigatório entre atendimentos</b> para preparo e higienização da maca.
+            </p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4 bg-slate-950 p-4 rounded-xl border border-slate-800 mb-3">
+            <div>
+              <label class="block text-slate-300 font-semibold mb-1 text-xs">Abertura da Maca</label>
+              <input type="time" id="emp-agenda-open" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono text-sm" value="08:30" />
+            </div>
+            <div>
+              <label class="block text-slate-300 font-semibold mb-1 text-xs">Fechamento da Maca</label>
+              <input type="time" id="emp-agenda-close" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono text-sm" value="19:30" />
+            </div>
+            <div>
+              <label class="block text-slate-300 font-semibold mb-1 text-xs">Almoço (Início)</label>
+              <input type="time" id="emp-agenda-lunch-start" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono text-sm" value="12:30" />
+            </div>
+            <div>
+              <label class="block text-slate-300 font-semibold mb-1 text-xs">Almoço (Fim)</label>
+              <input type="time" id="emp-agenda-lunch-end" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono text-sm" value="13:30" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950 p-4 rounded-xl border border-slate-800">
+            <div>
+              <label class="block text-slate-300 font-semibold mb-1 text-xs">
+                🛡️ Intervalo / Buffer Obrigatório entre Atendimentos (Minutos)
+              </label>
+              <div class="flex items-center gap-2">
+                <input type="number" id="emp-agenda-buffer" min="0" max="60" step="5" class="w-32 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-emerald-300 font-bold text-sm" value="15" />
+                <span class="text-xs text-slate-400">minutos entre um atendimento e o próximo</span>
+              </div>
+              <p class="text-[11px] text-slate-400 mt-1">
+                Garante que a maca nunca fique sobrecarregada, bloqueando conflitos e calculando slots livres com folga de preparo/higienização.
+              </p>
+            </div>
+            <div>
+              <label class="block text-slate-300 font-semibold mb-1 text-xs">Dias da Semana com Atendimento na Maca</label>
+              <div class="grid grid-cols-4 gap-2 pt-1 text-xs">
+                <label class="flex items-center gap-1.5 text-slate-300 cursor-pointer">
+                  <input type="checkbox" id="emp-agenda-day-1" class="rounded bg-slate-900 border-slate-700 text-sky-600 focus:ring-0" checked /> Seg
+                </label>
+                <label class="flex items-center gap-1.5 text-slate-300 cursor-pointer">
+                  <input type="checkbox" id="emp-agenda-day-2" class="rounded bg-slate-900 border-slate-700 text-sky-600 focus:ring-0" checked /> Ter
+                </label>
+                <label class="flex items-center gap-1.5 text-slate-300 cursor-pointer">
+                  <input type="checkbox" id="emp-agenda-day-3" class="rounded bg-slate-900 border-slate-700 text-sky-600 focus:ring-0" checked /> Qua
+                </label>
+                <label class="flex items-center gap-1.5 text-slate-300 cursor-pointer">
+                  <input type="checkbox" id="emp-agenda-day-4" class="rounded bg-slate-900 border-slate-700 text-sky-600 focus:ring-0" checked /> Qui
+                </label>
+                <label class="flex items-center gap-1.5 text-slate-300 cursor-pointer">
+                  <input type="checkbox" id="emp-agenda-day-5" class="rounded bg-slate-900 border-slate-700 text-sky-600 focus:ring-0" checked /> Sex
+                </label>
+                <label class="flex items-center gap-1.5 text-slate-300 cursor-pointer">
+                  <input type="checkbox" id="emp-agenda-day-6" class="rounded bg-slate-900 border-slate-700 text-sky-600 focus:ring-0" checked /> Sáb
+                </label>
+                <label class="flex items-center gap-1.5 text-rose-300 cursor-pointer">
+                  <input type="checkbox" id="emp-agenda-day-0" class="rounded bg-slate-900 border-slate-700 text-rose-600 focus:ring-0" /> Dom (Fechado)
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================================================================== -->
+        <!-- CONFIGURAÇÃO DE HORÁRIO DO WHATSAPP & FILA NOTURNA INTELIGENTE    -->
+        <!-- ================================================================== -->
+        <div class="border-t border-slate-800 pt-5">
+          <div class="mb-3">
+            <h3 class="text-sm font-bold text-indigo-400">📱 Horário de Atendimento do WhatsApp & Fila Noturna Inteligente</h3>
+            <p class="text-[11px] text-slate-400">
+              O robô responde os clientes dentro do horário de suporte. Fora dele, as mensagens entram na fila noturna para serem respondidas no dia seguinte — <b>sempre respeitando a conversa manual da profissional</b>.
+            </p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-950 p-4 rounded-xl border border-slate-800 mb-3">
+            <div>
+              <label class="block text-slate-300 font-semibold mb-1 text-xs">Ativar Controle de Horário do WhatsApp?</label>
+              <select id="emp-wa-hours-enabled" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-indigo-300 font-semibold text-sm">
+                <option value="1">✅ Ativo (Respeitar expediente e enfileirar à noite)</option>
+                <option value="0">24h Direto (Responder a qualquer hora)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-slate-300 font-semibold mb-1 text-xs">Início do Expediente WhatsApp</label>
+              <input type="time" id="emp-wa-open" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono text-sm" value="08:00" />
+            </div>
+            <div>
+              <label class="block text-slate-300 font-semibold mb-1 text-xs">Término do Expediente WhatsApp</label>
+              <input type="time" id="emp-wa-close" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono text-sm" value="21:00" />
+            </div>
+          </div>
+
+          <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
+            <div class="flex items-center justify-between">
+              <label class="flex items-center gap-2 text-xs font-semibold text-slate-300 cursor-pointer">
+                <input type="checkbox" id="emp-wa-autoreply-out" class="rounded bg-slate-900 border-slate-700 text-indigo-600 focus:ring-0" checked />
+                <span>Enviar aviso automático amigável quando receber mensagem fora do expediente (máximo 1x a cada 12h por cliente)</span>
+              </label>
+            </div>
+            <div>
+              <label class="block text-slate-400 text-xs mb-1">Mensagem de Fora do Expediente:</label>
+              <textarea id="emp-wa-out-message" rows="2" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-white" placeholder="Olá! Meu horário de atendimento no WhatsApp é de segunda a sábado..."></textarea>
+            </div>
+            <div class="p-2.5 bg-indigo-950/40 border border-indigo-800/40 rounded-lg text-[11px] text-indigo-200">
+              🛡️ <b>Proteção de Intervenção Humana:</b> Se você (profissional) estiver conversando com o cliente no WhatsApp, o robô <b>nunca responde em cima</b> nem envia mensagens automáticas da fila. A sua conversa humana tem prioridade absoluta!
+            </div>
+          </div>
+        </div>
+
+        <div class="flex justify-end pt-3 border-t border-slate-800">
+          <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-6 py-2.5 rounded-lg transition">
+            💾 Salvar Configurações & Catálogo de Serviços
+          </button>
+        </div>
+        </form>
+
+        <!-- ================================================================== -->
+        <!-- CARD DE MONITORAMENTO DA FILA DE FORA DE EXPEDIENTE               -->
+        <!-- ================================================================== -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 class="text-base font-bold text-white flex items-center gap-2">
+                <span>📥 Fila de Mensagens Noturnas / Fora de Expediente</span>
+                <span id="queue-count-badge" class="px-2 py-0.5 rounded-full text-xs font-mono bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">0</span>
+              </h2>
+              <p class="text-xs text-slate-400">
+                Mensagens recebidas fora do horário de atendimento. Quando o expediente abre, são processadas respeitando conversas manuais existentes.
+              </p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button type="button" onclick="loadQueue()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold px-3 py-1.5 rounded-lg transition">
+                🔄 Atualizar Fila
+              </button>
+              <button type="button" onclick="processQueueNow()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-3.5 py-1.5 rounded-lg transition shadow">
+                ⚡ Processar Fila Agora
+              </button>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto bg-slate-950 border border-slate-800 rounded-xl p-3">
+            <table class="w-full text-left text-xs">
+              <thead>
+                <tr class="text-slate-400 border-b border-slate-800">
+                  <th class="pb-2 pr-2">Data/Hora</th>
+                  <th class="pb-2 px-2">Cliente</th>
+                  <th class="pb-2 px-2">Mensagem</th>
+                  <th class="pb-2 px-2 w-32">Status</th>
+                  <th class="pb-2 pl-2 w-32">Processado em</th>
+                </tr>
+              </thead>
+              <tbody id="queue-tbody" class="divide-y divide-slate-900">
+                <tr><td colspan="5" class="py-4 text-center text-slate-500 italic">Nenhuma mensagem enfileirada no momento.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================================================================== -->
+      <!-- TELA 3: SKILL & GUARDRAILS POR EMPRESA (`SKILL.md`)                -->
+      <!-- ================================================================== -->
+      <section id="view-skills" class="tab-view hidden space-y-6">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h1 class="text-xl font-bold text-white">🛡️ Skill & Guardrails de Segurança da Empresa</h1>
+            <p class="text-xs text-slate-400 mt-0.5">
+              Cada empresa possui sua própria Skill (Catálogo Oficial, Tom de Voz e Limites de Segurança sobre o que a IA pode ou nunca pode responder).
+            </p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <form onsubmit="saveCompanySkill(event)" class="lg:col-span-8 bg-slate-900 border border-slate-800 rounded-xl p-6 flex flex-col gap-4">
+            <div class="flex items-center justify-between">
+              <label class="text-sm font-bold text-emerald-400">
+                📄 Documento `SKILL.md` Ativo para esta Empresa:
+              </label>
+              <span class="text-[11px] text-slate-400">Injetado em todas as chamadas ao Gemini</span>
+            </div>
+            <textarea id="skill-editor-textarea" rows="18" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-4 text-xs text-slate-100 font-mono leading-relaxed focus:outline-none focus:border-emerald-500"></textarea>
+            <div class="flex justify-end">
+              <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-5 py-2.5 rounded-lg transition">
+                🛡️ Atualizar Skill & Guardrails da Empresa
+              </button>
+            </div>
+          </form>
+
+          <!-- Coluna Lateral: Perguntas Ativas do Nicho -->
+          <div class="lg:col-span-4 bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4 text-xs">
+            <div>
+              <h3 class="font-bold text-sm text-white">💬 Roteiro de Perguntas Naturais</h3>
+              <p class="text-slate-400 text-[11px] mt-0.5">
+                Perguntas que o assistente faz de forma invisível durante a conversa para montar a ficha:
+              </p>
+            </div>
+            <div id="skill-questions-preview" class="space-y-2.5"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================================================================== -->
+      <!-- TELA 4: CONEXÕES WHATSAPP & DISPARO DIRETO                         -->
+      <!-- ================================================================== -->
+      <section id="view-whatsapp" class="tab-view hidden space-y-6">
+        <div class="flex flex-wrap items-center justify-between gap-4 bg-slate-900 border border-slate-800 rounded-xl p-5">
+          <div>
+            <h1 class="text-xl font-bold text-white">📱 Sessões de WhatsApp (Baileys Multi-Sessão)</h1>
+            <p class="text-xs text-slate-400 mt-0.5">
+              Crie novas sessões, gere QR Code, troque de aparelho ou exclua sessões antigas a qualquer momento.
+            </p>
+          </div>
+          <form onsubmit="createNewInstance(event)" class="flex flex-wrap items-center gap-2">
+            <input id="new-instance-name" placeholder="Nome da sessão (ex: WhatsApp ADEN)" class="bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white w-64" />
+            <button type="submit" class="text-xs bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg font-semibold transition shadow">
+              + Criar Nova Sessão & Gerar QR Code
+            </button>
+          </form>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div id="instances-list" class="lg:col-span-7 space-y-4 text-xs"></div>
+
+          <div class="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
+            <h3 class="font-bold text-sm text-emerald-400">📤 Enviar Mensagem Real pelo WhatsApp da Empresa</h3>
+            <form onsubmit="sendDirectWhatsApp(event)" class="space-y-3 text-xs">
+              <div>
+                <label class="block text-slate-400 mb-1">DDI + DDD + Telefone (ou JID):</label>
+                <input id="direct-phone" required placeholder="Ex: 5511974065584" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white" />
+              </div>
+              <div>
+                <label class="block text-slate-400 mb-1">Mensagem:</label>
+                <textarea id="direct-text" required rows="3" placeholder="Digite a mensagem..." class="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white"></textarea>
+              </div>
+              <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2 rounded-lg transition">
+                Disparar Mensagem Agora
+              </button>
+              <div id="direct-status" class="text-xs text-emerald-300 hidden"></div>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================================================================== -->
+      <!-- TELA 5: FICHA VIVA (FOLLOW-UP AUTOMÁTICO PÓS-ATENDIMENTO)          -->
+      <!-- ================================================================== -->
+      <section id="view-ficha-viva" class="tab-view hidden space-y-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <h1 class="text-xl font-bold text-white">🔄 "Ficha Viva" — Reavaliação Pós-Atendimento</h1>
+            <p class="text-xs text-slate-400 mt-0.5">
+              Mensagens automáticas enviadas 24h após a sessão. Se o cliente relatar dor ou reação adversa, a profissional é alertada na hora.
+            </p>
+          </div>
+          <button onclick="dispatchFollowups()" class="text-xs bg-amber-600 hover:bg-amber-500 text-white px-4 py-2 rounded-lg font-semibold">
+            ⚡ Disparar Follow-ups Pendentes Agora
+          </button>
+        </div>
+
+        <div id="followups-list" class="space-y-3 text-xs"></div>
+      </section>
+
+      <!-- ================================================================== -->
+      <!-- TELA 6: INTEGRAÇÕES (WEBHOOKS EXTERNOS), SIMULADOR & LOGS          -->
+      <!-- ================================================================== -->
+      <section id="view-integracoes" class="tab-view hidden space-y-6">
+        <div>
+          <h1 class="text-xl font-bold text-white">🔌 Integrações com Outros Sistemas (Webhooks) & Simulador</h1>
+          <p class="text-xs text-slate-400 mt-0.5">
+            Conecte qualquer outra solução futura que você criar ao WhatsApp Hub e simule conversas completas.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- Simulador de Conversa -->
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
+            <h3 class="font-bold text-sm text-white">🎙️ Simulador de Conversa (Sem usar o celular)</h3>
+            <div class="grid grid-cols-3 gap-2 text-[11px]">
+              <button onclick="fillScenario('client_full')" class="bg-slate-800 hover:bg-slate-700 text-emerald-300 border border-slate-700 rounded p-2 text-left">
+                ⚡ <b>Cenário 1:</b> Cliente pede Massagem
+              </button>
+              <button onclick="fillScenario('prof_dictation')" class="bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 rounded p-2 text-left">
+                🎙️ <b>Cenário 2:</b> Ditado da Profissional
+              </button>
+              <button onclick="fillScenario('prof_query')" class="bg-slate-800 hover:bg-slate-700 text-sky-300 border border-slate-700 rounded p-2 text-left">
+                🔍 <b>Cenário 3:</b> Comando <code>#ficha</code>
+              </button>
+            </div>
+
+            <form onsubmit="simulateMessage(event)" class="space-y-3 text-xs">
+              <div class="grid grid-cols-2 gap-2">
+                <input id="sim-name" value="Ricardo Messias" placeholder="Nome" class="bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white" />
+                <input id="sim-phone" value="5511988887777" placeholder="Telefone" class="bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white" />
+              </div>
+              <textarea id="sim-text" rows="3" class="w-full bg-slate-950 border border-slate-700 rounded p-2 text-white">Quero agendar uma Massagem com Pedras Quentes</textarea>
+              <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2 rounded-lg">
+                Simular Envio no Hub
+              </button>
+            </form>
+            <div id="sim-result" class="hidden bg-slate-950 border border-emerald-800/60 rounded-lg p-3 text-xs whitespace-pre-wrap"></div>
+          </div>
+
+          <!-- Webhooks Externos -->
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
+            <h3 class="font-bold text-sm text-white">🔗 Webhooks para Outras Soluções Suas</h3>
+            <form onsubmit="createWebhook(event)" class="space-y-2.5 text-xs">
+              <input id="wh-system" required placeholder="Nome da Solução (ex: sistema-agenda, cobranca)" class="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-white" />
+              <input id="wh-url" required type="url" placeholder="URL do Webhook (ex: http://localhost:4000/webhook)" class="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-white" />
+              <input id="wh-prefix" placeholder="Filtro opcional por prefixo (ex: #agenda)" class="w-full bg-slate-950 border border-slate-700 rounded px-3 py-2 text-white" />
+              <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2 rounded-lg">
+                Registrar Webhook
+              </button>
+            </form>
+            <div id="webhooks-list" class="space-y-2 text-xs"></div>
+          </div>
+        </div>
+
+        <!-- Logs Técnicos -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3">
+          <h3 class="font-bold text-sm text-white">📋 Últimos Eventos do Hub (`hub_message_logs`)</h3>
+          <div id="logs-list" class="space-y-2 text-xs max-h-72 overflow-y-auto"></div>
+        </div>
+      </section>
+
+      <!-- ================================================================== -->
+      <!-- TELA 7: RELATÓRIO DE DESEMPENHO DO NEGÓCIO                        -->
+      <!-- ================================================================== -->
+      <section id="view-relatorio" class="tab-view hidden space-y-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <h1 class="text-xl font-bold text-white flex items-center gap-2">
+              <span>📊</span> Relatório de Desempenho do Negócio
+            </h1>
+            <p class="text-xs text-slate-400 mt-0.5">
+              Controle de atendimentos executados, agendamentos futuros, pacotes ativos e faturamento.
+            </p>
+          </div>
+          <button onclick="loadBusinessReport()" class="text-xs bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2 transition">
+            🔄 Atualizar Relatório
+          </button>
+        </div>
+
+        <!-- KPI CARDS -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+            <span class="text-xs text-slate-400 font-medium">Sessões Executadas</span>
+            <div id="rep-kpi-executions" class="text-2xl font-bold text-emerald-400 mt-1">-</div>
+            <div class="text-[11px] text-slate-500 mt-1">Evoluções registradas</div>
+          </div>
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+            <span class="text-xs text-slate-400 font-medium">Agendamentos Futuros</span>
+            <div id="rep-kpi-upcoming" class="text-2xl font-bold text-sky-400 mt-1">-</div>
+            <div class="text-[11px] text-slate-500 mt-1">Horários guardados</div>
+          </div>
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+            <span class="text-xs text-slate-400 font-medium">Pacotes Ativos</span>
+            <div id="rep-kpi-packages" class="text-2xl font-bold text-purple-400 mt-1">-</div>
+            <div id="rep-kpi-pkg-sessions" class="text-[11px] text-slate-500 mt-1">- sessões restantes</div>
+          </div>
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+            <span class="text-xs text-slate-400 font-medium">Faturamento Estimado</span>
+            <div id="rep-kpi-revenue" class="text-2xl font-bold text-amber-400 mt-1">R$ 0,00</div>
+            <div id="rep-kpi-balance" class="text-[11px] text-slate-500 mt-1">A receber: R$ 0,00</div>
+          </div>
+        </div>
+
+        <!-- TABELAS EM 2 COLUNAS -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3">
+            <h3 class="font-bold text-sm text-white flex items-center gap-2">
+              <span>🗓️</span> Próximos Atendimentos Guardados na Agenda
+            </h3>
+            <div id="rep-upcoming-list" class="space-y-2 text-xs max-h-60 overflow-y-auto"></div>
+          </div>
+
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3">
+            <h3 class="font-bold text-sm text-white flex items-center gap-2">
+              <span>📦</span> Pacotes Ativos & Saldo de Sessões
+            </h3>
+            <div id="rep-packages-list" class="space-y-2 text-xs max-h-60 overflow-y-auto"></div>
+          </div>
+        </div>
+
+        <!-- PROCEDIMENTOS MAIS PROCURADOS & RELATÓRIO FORMATADO -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3">
+            <h3 class="font-bold text-sm text-white flex items-center gap-2">
+              <span>🏆</span> Procedimentos Mais Procurados
+            </h3>
+            <div id="rep-popular-list" class="space-y-2 text-xs max-h-60 overflow-y-auto"></div>
+          </div>
+
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3">
+            <h3 class="font-bold text-sm text-white flex items-center gap-2">
+              <span>📱</span> Resumo Visual Formatado (Pronto para WhatsApp)
+            </h3>
+            <pre id="rep-formatted-text" class="bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs text-slate-300 font-mono whitespace-pre-wrap max-h-60 overflow-y-auto"></pre>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script>
+    let currentTab = 'prancheta';
+    let selectedTenantId = 'tenant_demo_estetica';
+    let cachedTenants = [];
+    let cachedPresets = [];
+    let cachedInstances = [];
+
+    function switchTab(tabName) {
+      currentTab = tabName;
+      document.querySelectorAll('.tab-view').forEach(el => el.classList.add('hidden'));
+      document.getElementById(`view-${tabName}`).classList.remove('hidden');
+
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.classList.remove('bg-emerald-500/15', 'text-emerald-400', 'border', 'border-emerald-500/30');
+        btn.classList.add('text-slate-400', 'hover:bg-slate-800/60', 'hover:text-white');
+      });
+
+      const activeBtn = document.getElementById(`nav-${tabName}`);
+      if (activeBtn) {
+        activeBtn.classList.remove('text-slate-400', 'hover:bg-slate-800/60', 'hover:text-white');
+        activeBtn.classList.add('bg-emerald-500/15', 'text-emerald-400', 'border', 'border-emerald-500/30');
+      }
+    }
+
+    function onSelectTenant(tenantId) {
+      selectedTenantId = tenantId;
+      populateCompanyForms();
+      loadAll();
+    }
+
+    async function openNewTenantModal() {
+      const name = prompt('Nome da Nova Empresa / Clínica (ex: Clínica Odonto Sorriso, Pet Shop Amigo):');
+      if (!name) return;
+      const ownerPhone = prompt('WhatsApp do Profissional/Responsável (ex: 5511999999999):', '5511999999999');
+      const res = await fetch('/api/v1/tenants', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, ownerPhone })
+      }).then(r => r.json());
+
+      selectedTenantId = res.id;
+      await loadAll();
+      populateCompanyForms();
+      switchTab('empresas');
+    }
+
+    let editingServicesCatalog = [];
+
+    function parseDownPaymentPreview(ruleText, price) {
+      const clean = String(ruleText || '').trim();
+      const pctMatch = clean.match(/(\d+(?:[.,]\d+)?)\s*%/);
+      const numPrice = Number(price) || 0;
+      if (pctMatch) {
+        const pct = parseFloat(pctMatch[1].replace(',', '.'));
+        const rounded = Math.round((numPrice * pct) / 100);
+        return `R$ ${rounded},00 (${pct}%)`;
+      }
+      const fixedMatch = clean.match(/(?:r\$\s*)?(\d+(?:[.,]\d+)?)/i);
+      if (fixedMatch) {
+        const fixed = Math.round(parseFloat(fixedMatch[1].replace(',', '.')));
+        return `R$ ${fixed},00 (Fixo)`;
+      }
+      return `R$ ${Math.round(numPrice * 0.5)},00 (50%)`;
+    }
+
+    function renderServicesEditorTable() {
+      const tbody = document.getElementById('emp-services-tbody');
+      if (!tbody) return;
+      const ruleText = document.getElementById('emp-down-payment-info')?.value || '30% do valor da sessão';
+
+      tbody.innerHTML = editingServicesCatalog.map((srv, idx) => `
+        <tr>
+          <td class="py-2 pr-2">
+            <input value="${(srv.name || '').replace(/"/g, '&quot;')}" oninput="updateServiceRow(${idx}, 'name', this.value)" placeholder="Ex: Massagem Relaxante" class="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-white" />
+          </td>
+          <td class="py-2 px-2">
+            <input type="number" value="${srv.durationMinutes || 60}" oninput="updateServiceRow(${idx}, 'durationMinutes', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-white" />
+          </td>
+          <td class="py-2 px-2">
+            <input type="number" value="${srv.priceSingle || 0}" oninput="updateServiceRow(${idx}, 'priceSingle', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-emerald-300 font-semibold" />
+          </td>
+          <td class="py-2 px-2">
+            <input type="number" value="${srv.pricePackage4 ?? ''}" placeholder="Opcional" oninput="updateServiceRow(${idx}, 'pricePackage4', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-slate-200" />
+          </td>
+          <td class="py-2 px-2">
+            <span id="srv-signal-preview-${idx}" class="inline-block bg-amber-950/70 border border-amber-700/60 text-amber-300 font-bold px-2.5 py-1 rounded-lg">
+              💸 ${parseDownPaymentPreview(ruleText, srv.priceSingle)}
+            </span>
+          </td>
+          <td class="py-2 pl-2 text-right">
+            <button type="button" onclick="removeServiceRow(${idx})" class="text-rose-400 hover:text-rose-300 font-semibold px-2 py-1">
+              ✕
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function updateServiceRow(idx, field, val) {
+      if (!editingServicesCatalog[idx]) return;
+      if (field === 'name') {
+        editingServicesCatalog[idx].name = val;
+      } else if (field === 'durationMinutes') {
+        editingServicesCatalog[idx].durationMinutes = Math.round(Number(val) || 60);
+      } else if (field === 'priceSingle') {
+        editingServicesCatalog[idx].priceSingle = Math.round(Number(val) || 0);
+        const ruleText = document.getElementById('emp-down-payment-info')?.value || '30% do valor da sessão';
+        const badge = document.getElementById(`srv-signal-preview-${idx}`);
+        if (badge) badge.innerHTML = `💸 ${parseDownPaymentPreview(ruleText, editingServicesCatalog[idx].priceSingle)}`;
+      } else if (field === 'pricePackage4') {
+        editingServicesCatalog[idx].pricePackage4 = val === '' ? null : Math.round(Number(val) || 0);
+      }
+    }
+
+    function addServiceRow() {
+      editingServicesCatalog.push({
+        id: `srv_${Date.now().toString().slice(-4)}`,
+        name: 'Novo Procedimento',
+        durationMinutes: 60,
+        priceSingle: 100,
+        pricePackage4: null,
+      });
+      renderServicesEditorTable();
+    }
+
+    function removeServiceRow(idx) {
+      editingServicesCatalog.splice(idx, 1);
+      renderServicesEditorTable();
+    }
+
+    function populateCompanyForms() {
+      const tenant = cachedTenants.find(t => t.id === selectedTenantId) || cachedTenants[0];
+      if (!tenant) return;
+
+      document.getElementById('btn-print-pdf').href = `/api/v1/tenants/${tenant.id}/print-preview`;
+
+      // Preenche aba Empresas & Credenciais se o usuário não estiver digitando nela
+      if (document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
+        document.getElementById('emp-name').value = tenant.name || '';
+        document.getElementById('emp-preset').value = tenant.vertical_preset_id || 'massoterapia_estetica';
+        document.getElementById('emp-ai-key').value = tenant.ai_api_key || '';
+        document.getElementById('emp-ai-model').value = tenant.ai_model || 'gemini-3.8-flash';
+        document.getElementById('emp-wa-instance').value = tenant.whatsapp_instance_id || (cachedInstances[0]?.id || '');
+        document.getElementById('emp-owner-phone').value = tenant.owner_phone || '';
+        document.getElementById('emp-sec-mode').value = tenant.security_mode || 'TEST_WHITELIST';
+        document.getElementById('emp-require-pix').value = tenant.require_down_payment ? '1' : '0';
+        document.getElementById('emp-pix-key').value = tenant.pix_key || '';
+        document.getElementById('emp-down-payment-info').value = tenant.down_payment_info || '30% do valor da sessão';
+
+        try {
+          const parsedSrv = JSON.parse(tenant.services_catalog || '[]');
+          editingServicesCatalog = Array.isArray(parsedSrv) && parsedSrv.length > 0 ? parsedSrv : [
+            { id: 'srv_relaxante', name: 'Massagem Relaxante', durationMinutes: 60, priceSingle: 120, pricePackage4: 420 },
+            { id: 'srv_drenagem', name: 'Drenagem Linfática', durationMinutes: 50, priceSingle: 80, pricePackage4: 280 },
+            { id: 'srv_pedras', name: 'Massagem com Pedras Quentes', durationMinutes: 75, priceSingle: 170, pricePackage4: 600 },
+            { id: 'srv_thai', name: 'Thai Massage', durationMinutes: 60, priceSingle: 160, pricePackage4: 560 },
+            { id: 'srv_localizada', name: 'Massagem Localizada - Foco na Queixa', durationMinutes: 30, priceSingle: 80, pricePackage4: 280 },
+          ];
+        } catch {
+          editingServicesCatalog = [];
+        }
+        renderServicesEditorTable();
+
+        try {
+          const jids = JSON.parse(tenant.allowed_test_jids || '[]');
+          document.getElementById('emp-allowed-jids').value = jids.join(', ');
+        } catch {
+          document.getElementById('emp-allowed-jids').value = '';
+        }
+
+        // Preenche Agenda da Maca (dias, horários e buffer)
+        try {
+          const agendaCfg = JSON.parse(tenant.agenda_config || '{}');
+          document.getElementById('emp-agenda-open').value = agendaCfg.openTime || '08:30';
+          document.getElementById('emp-agenda-close').value = agendaCfg.closeTime || '19:30';
+          document.getElementById('emp-agenda-lunch-start').value = agendaCfg.lunchStart || '12:30';
+          document.getElementById('emp-agenda-lunch-end').value = agendaCfg.lunchEnd || '13:30';
+          document.getElementById('emp-agenda-buffer').value = typeof agendaCfg.bufferMinutes === 'number' ? agendaCfg.bufferMinutes : 15;
+          const bDays = Array.isArray(agendaCfg.businessDays) ? agendaCfg.businessDays : [1, 2, 3, 4, 5, 6];
+          for (let d = 0; d <= 6; d++) {
+            const cb = document.getElementById(`emp-agenda-day-${d}`);
+            if (cb) cb.checked = bDays.includes(d);
+          }
+        } catch {}
+
+        // Preenche Horário do WhatsApp & Fila Noturna
+        try {
+          const waCfg = JSON.parse(tenant.whatsapp_hours_config || '{}');
+          document.getElementById('emp-wa-hours-enabled').value = waCfg.enabled !== false ? '1' : '0';
+          document.getElementById('emp-wa-open').value = waCfg.openTime || '08:00';
+          document.getElementById('emp-wa-close').value = waCfg.closeTime || '21:00';
+          document.getElementById('emp-wa-autoreply-out').checked = waCfg.autoReplyOutOfHours !== false;
+          document.getElementById('emp-wa-out-message').value = waCfg.outOfHoursMessage || 'Olá! Meu horário de atendimento no WhatsApp é de segunda a sábado, das 08:00 às 21:00. Recebi sua mensagem e ela já está guardada na minha fila. Assim que eu iniciar o expediente, já te respondo por aqui! 😊';
+        } catch {}
+
+        document.getElementById('skill-editor-textarea').value = tenant.skill_markdown || '';
+      }
+
+      loadQueue();
+
+      // Renderiza perguntas do nicho da empresa na aba Skills
+      const preset = cachedPresets.find(p => p.id === tenant.vertical_preset_id);
+      if (preset) {
+        document.getElementById('skill-questions-preview').innerHTML = preset.formSchema.map((q, idx) => `
+          <div class="bg-slate-950 border border-slate-800 rounded-lg p-3">
+            <div class="font-semibold text-emerald-400 text-[11px]">${idx + 1}. ${q.label}</div>
+            <div class="text-slate-300 mt-1 italic">"${q.questionPrompt}"</div>
+          </div>
+        `).join('');
+      }
+    }
+
+    async function saveCompanyProfile(e) {
+      e.preventDefault();
+
+      const businessDays = [];
+      for (let d = 0; d <= 6; d++) {
+        const cb = document.getElementById(`emp-agenda-day-${d}`);
+        if (cb && cb.checked) businessDays.push(d);
+      }
+
+      const agendaConfig = {
+        businessDays,
+        openTime: document.getElementById('emp-agenda-open').value || '08:30',
+        closeTime: document.getElementById('emp-agenda-close').value || '19:30',
+        lunchStart: document.getElementById('emp-agenda-lunch-start').value || null,
+        lunchEnd: document.getElementById('emp-agenda-lunch-end').value || null,
+        bufferMinutes: Number(document.getElementById('emp-agenda-buffer').value) || 15,
+        slotIntervalMinutes: 30,
+      };
+
+      const whatsappHoursConfig = {
+        enabled: document.getElementById('emp-wa-hours-enabled').value === '1',
+        supportDays: [1, 2, 3, 4, 5, 6],
+        openTime: document.getElementById('emp-wa-open').value || '08:00',
+        closeTime: document.getElementById('emp-wa-close').value || '21:00',
+        autoReplyOutOfHours: document.getElementById('emp-wa-autoreply-out').checked,
+        outOfHoursMessage: document.getElementById('emp-wa-out-message').value,
+      };
+
+      const payload = {
+        name: document.getElementById('emp-name').value,
+        verticalPresetId: document.getElementById('emp-preset').value,
+        aiApiKey: document.getElementById('emp-ai-key').value,
+        aiModel: document.getElementById('emp-ai-model').value,
+        whatsappInstanceId: document.getElementById('emp-wa-instance').value || null,
+        ownerPhone: document.getElementById('emp-owner-phone').value,
+        securityMode: document.getElementById('emp-sec-mode').value,
+        allowedTestJids: document.getElementById('emp-allowed-jids').value,
+        requireDownPayment: document.getElementById('emp-require-pix').value === '1',
+        pixKey: document.getElementById('emp-pix-key').value,
+        downPaymentInfo: document.getElementById('emp-down-payment-info').value,
+        servicesCatalog: editingServicesCatalog,
+        agendaConfig,
+        whatsappHoursConfig,
+      };
+
+      await fetch(`/api/v1/tenants/${selectedTenantId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      alert('✅ Configurações salvas: dias/horários da maca com buffer entre atendimentos e horário do WhatsApp!');
+      await loadAll();
+    }
+
+    async function loadQueue() {
+      try {
+        const res = await fetch(`/api/v1/tenants/${selectedTenantId}/queue`).then(r => r.json());
+        const list = res.queue || [];
+        const badge = document.getElementById('queue-count-badge');
+        const activeQueued = list.filter(i => i.status === 'QUEUED').length;
+        if (badge) badge.innerText = String(activeQueued);
+
+        const tbody = document.getElementById('queue-tbody');
+        if (!tbody) return;
+
+        if (list.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="5" class="py-4 text-center text-slate-500 italic">Nenhuma mensagem registrada na fila.</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = list.map(item => {
+          let statusBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30">⏳ Aguardando</span>';
+          if (item.status === 'PROCESSED') {
+            statusBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">✅ Respondido Bot</span>';
+          } else if (item.status === 'SKIPPED_MANUAL_ANSWER') {
+            statusBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-sky-500/20 text-sky-300 border border-sky-500/30">👤 Atendido Manual</span>';
+          }
+
+          const txt = item.ai_transcription || item.raw_content || '';
+          return `
+            <tr class="hover:bg-slate-900/60 transition">
+              <td class="py-2.5 pr-2 font-mono text-slate-400 text-[11px]">${item.created_at || '-'}</td>
+              <td class="py-2.5 px-2">
+                <div class="font-semibold text-white">${item.push_name || item.customer_name || 'Cliente'}</div>
+                <div class="text-[10px] text-slate-400 font-mono">${item.sender_phone}</div>
+              </td>
+              <td class="py-2.5 px-2 max-w-xs truncate text-slate-300" title="${txt.replace(/"/g, '&quot;')}">${txt}</td>
+              <td class="py-2.5 px-2">${statusBadge}</td>
+              <td class="py-2.5 pl-2 text-slate-400 font-mono text-[11px]">${item.processed_at || '-'}</td>
+            </tr>
+          `;
+        }).join('');
+      } catch (err) {
+        console.warn('Erro ao carregar fila:', err);
+      }
+    }
+
+    async function processQueueNow() {
+      try {
+        const res = await fetch(`/api/v1/tenants/${selectedTenantId}/queue/process`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        }).then(r => r.json());
+        alert(`⚡ Processamento da fila concluído!\nMensagens respondidas: ${res.processed || 0}\nIgnoradas por atendimento manual da profissional: ${res.skipped || 0}`);
+        await loadQueue();
+      } catch (err) {
+        alert('Erro ao processar fila: ' + err.message);
+      }
+    }
+
+    async function saveCompanySkill(e) {
+      e.preventDefault();
+      const skillMarkdown = document.getElementById('skill-editor-textarea').value;
+      await fetch(`/api/v1/tenants/${selectedTenantId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ skillMarkdown })
+      });
+      alert('🛡️ Skill e Guardrails de Segurança atualizados para esta empresa!');
+      await loadAll();
+    }
+
+    async function confirmRecordPayment(recordId, customerName) {
+      if (!confirm(`Confirmar que você recebeu o pagamento do sinal de "${customerName}" e enviar confirmação oficial do agendamento no WhatsApp?`)) {
+        return;
+      }
+      const res = await fetch(`/api/v1/records/${recordId}/confirm-payment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      }).then(r => r.json());
+
+      if (res.found) {
+        alert(`✅ Sinal confirmado! O agendamento de ${res.customerName} foi efetivado e o cliente já foi notificado no WhatsApp.`);
+      }
+      await loadAll();
+    }
+
+    async function loadAll() {
+      const [healthRes, instRes, whRes, presetsRes, tenantsRes, recordsRes, flwRes, logsRes] = await Promise.all([
+        fetch('/api/v1/health').then(r => r.json()),
+        fetch('/api/v1/instances').then(r => r.json()),
+        fetch('/api/v1/webhooks').then(r => r.json()),
+        fetch('/api/v1/vertical-presets').then(r => r.json()),
+        fetch('/api/v1/tenants').then(r => r.json()),
+        fetch(`/api/v1/records?tenantId=${selectedTenantId}`).then(r => r.json()),
+        fetch('/api/v1/followups').then(r => r.json()),
+        fetch('/api/v1/messages/logs').then(r => r.json()),
+      ]);
+
+      cachedTenants = tenantsRes.tenants;
+      cachedPresets = presetsRes.presets;
+      cachedInstances = instRes.instances;
+
+      const currentTenant = cachedTenants.find(t => t.id === selectedTenantId) || cachedTenants[0];
+      if (currentTenant) selectedTenantId = currentTenant.id;
+
+      // Sidebar status
+      document.getElementById('sidebar-health').innerHTML =
+        `🟢 Online • RAM: <b>${healthRes.memoryUsageMB} MB</b>`;
+
+      // Global Tenant Selector
+      const tenantSelect = document.getElementById('global-tenant-select');
+      tenantSelect.innerHTML = cachedTenants.map(t =>
+        `<option value="${t.id}" ${t.id === selectedTenantId ? 'selected' : ''}>${t.name} (${t.preset_name})</option>`
+      ).join('');
+
+      // Selects internos da aba Empresas
+      document.getElementById('emp-preset').innerHTML = cachedPresets.map(p =>
+        `<option value="${p.id}">${p.name}</option>`
+      ).join('');
+      document.getElementById('emp-wa-instance').innerHTML = cachedInstances.length === 0
+        ? `<option value="">(Nenhuma sessão ativa — crie na aba Conexões WhatsApp)</option>`
+        : cachedInstances.map(i =>
+            `<option value="${i.id}">${i.name} (${i.id} - ${i.status})</option>`
+          ).join('');
+
+      // Badges da empresa ativa no topo
+      if (currentTenant) {
+        const hasAiKey = Boolean(currentTenant.ai_api_key || healthRes.geminiConfigured);
+        const linkedInst = cachedInstances.find(i => i.id === currentTenant.whatsapp_instance_id);
+        document.getElementById('active-tenant-badges').innerHTML = `
+          <span class="px-2.5 py-1 rounded-full bg-slate-800 border border-slate-700 text-slate-300">
+            📱 WhatsApp: <b class="${linkedInst?.status === 'CONNECTED' ? 'text-emerald-400' : 'text-amber-400'}">${linkedInst?.status || 'DESCONECTADO'}</b>
+          </span>
+          <span class="px-2.5 py-1 rounded-full bg-slate-800 border border-slate-700 text-slate-300">
+            🧠 IA da Empresa: <b class="${hasAiKey ? 'text-emerald-400' : 'text-amber-400'}">${hasAiKey ? 'Chave Ativa' : 'Heurística Local'}</b>
+          </span>
+          <span class="px-2.5 py-1 rounded-full bg-slate-800 border border-slate-700 text-slate-300">
+            ${currentTenant.security_mode === 'PRODUCTION_ALL' ? '🌐 Modo Produção' : '🔒 Modo Teste Seguro'}
+          </span>
+        `;
+      }
+
+      populateCompanyForms();
+
+      // KPIs da Prancheta
+      const completedCount = recordsRes.records.filter(r => r.status === 'COMPLETED').length;
+      const inProgressCount = recordsRes.records.filter(r => r.status !== 'COMPLETED').length;
+      const alertsCount = recordsRes.records.reduce((acc, r) => acc + (r.activeAlerts?.length || 0), 0);
+
+      document.getElementById('prancheta-kpis').innerHTML = `
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+          <div class="text-xs text-slate-400">Fichas Concluídas</div>
+          <div class="text-2xl font-bold text-emerald-400 mt-1">${completedCount}</div>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+          <div class="text-xs text-slate-400">Em Atendimento no WhatsApp</div>
+          <div class="text-2xl font-bold text-amber-400 mt-1">${inProgressCount}</div>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+          <div class="text-xs text-slate-400">Alertas Clínicos Identificados</div>
+          <div class="text-2xl font-bold text-rose-400 mt-1">${alertsCount}</div>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+          <div class="text-xs text-slate-400">Skill de Segurança Ativa</div>
+          <div class="text-sm font-bold text-indigo-400 mt-2 truncate">${currentTenant?.name || '-'}</div>
+        </div>
+      `;
+
+      // Render Records
+      const recEl = document.getElementById('records-list');
+      recEl.innerHTML = recordsRes.records.length === 0
+        ? `<div class="text-center py-12 text-slate-500 text-sm bg-slate-900/50 border border-dashed border-slate-800 rounded-xl">
+             Nenhuma ficha registrada para esta empresa ainda.
+           </div>`
+        : recordsRes.records.map(r => `
+          <div class="bg-slate-900 border ${r.activeAlerts.length > 0 ? 'border-rose-800/80' : 'border-slate-800'} rounded-xl p-5 space-y-3">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <span class="font-bold text-base text-white">${r.customer_name}</span>
+                <span class="text-xs text-slate-400 ml-2">📞 ${r.customer_phone}</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-xs px-3 py-1 rounded-full font-semibold ${
+                  r.status === 'COMPLETED'
+                    ? 'bg-emerald-950 text-emerald-300 border border-emerald-700'
+                    : r.status === 'PENDING_PAYMENT'
+                      ? 'bg-amber-950 text-amber-300 border border-amber-600'
+                      : 'bg-slate-800 text-slate-300 border border-slate-700'
+                }">
+                  ${
+                    r.status === 'COMPLETED'
+                      ? '✅ Agendamento Confirmado'
+                      : r.status === 'PENDING_PAYMENT'
+                        ? '💸 Aguardando Sinal Pix (Profissional)'
+                        : '⏳ Conversa em Andamento'
+                  }
+                </span>
+                ${
+                  r.status === 'PENDING_PAYMENT' || (r.status === 'IN_PROGRESS' && r.formData?.preferencia_horario)
+                    ? `<button onclick="confirmRecordPayment('${r.id}', '${r.customer_name}')" class="text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-1 rounded-lg shadow transition">
+                         ✅ Confirmar Recebimento do Sinal & Agendar
+                       </button>`
+                    : ''
+                }
+              </div>
+            </div>
+
+            ${r.activeAlerts.length > 0 ? `
+              <div class="flex flex-wrap gap-2">
+                ${r.activeAlerts.map(a => `<span class="bg-rose-950/90 border border-rose-700 text-rose-200 text-xs px-3 py-1 rounded-lg font-semibold">${a}</span>`).join('')}
+              </div>
+            ` : ''}
+
+            <pre class="text-xs text-slate-200 whitespace-pre-wrap font-sans bg-slate-950 p-4 rounded-xl border border-slate-800">${r.ai_executive_summary || 'Coletando informações na conversa...'}</pre>
+
+            ${r.audioTranscriptions && r.audioTranscriptions.length > 0 ? `
+              <div class="border-t border-slate-800 pt-3 space-y-2">
+                <div class="text-xs font-semibold text-indigo-400">🎙️ Transcrições de Áudios do Cliente (${r.audioTranscriptions.length}):</div>
+                ${r.audioTranscriptions.map(at => `
+                  <div class="text-xs bg-indigo-950/30 border border-indigo-800/50 rounded-lg p-2.5 text-slate-200">
+                    <span class="text-indigo-400 font-semibold text-[11px]">[${at.created_at}]</span> "${at.ai_transcription}"
+                  </div>
+                `).join('')}
+              </div>
+            ` : ''}
+
+            ${r.evolutions && r.evolutions.length > 0 ? `
+              <div class="border-t border-slate-800 pt-3 space-y-2">
+                <div class="text-xs font-semibold text-amber-400">🎙️ Histórico de Sessões / Evoluções (${r.evolutions.length}):</div>
+                ${r.evolutions.map(ev => `
+                  <div class="text-xs bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-300">
+                    <span class="text-slate-500 text-[11px]">[${ev.session_date} • ${ev.source}]</span> ${ev.raw_input}
+                  </div>
+                `).join('')}
+              </div>
+            ` : ''}
+          </div>
+        `).join('');
+
+      // Render Instances (Aba WhatsApp)
+      document.getElementById('instances-list').innerHTML = cachedInstances.length === 0
+        ? `<div class="bg-slate-900 border border-dashed border-slate-700 rounded-xl p-8 text-center space-y-3">
+             <div class="text-sm font-bold text-slate-300">Nenhuma sessão de WhatsApp ativa no momento.</div>
+             <p class="text-xs text-slate-400">Clique abaixo ou use o campo acima para criar uma nova sessão limpa e escanear o QR Code.</p>
+             <button onclick="createNewInstance()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-5 py-2.5 rounded-lg shadow transition">
+               + Criar Nova Sessão de WhatsApp Agora
+             </button>
+           </div>`
+        : cachedInstances.map(inst => {
+            const isLinkedToCurrent = currentTenant && currentTenant.whatsapp_instance_id === inst.id;
+            return `
+              <div class="bg-slate-900 border ${isLinkedToCurrent ? 'border-emerald-700/70' : 'border-slate-800'} rounded-xl p-5 space-y-3">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <div class="flex items-center gap-2">
+                      <span class="font-bold text-sm text-white">${inst.name}</span>
+                      ${isLinkedToCurrent
+                        ? `<span class="text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-700 px-2 py-0.5 rounded-full font-semibold">🔗 Vinculada a ${currentTenant.name}</span>`
+                        : currentTenant
+                          ? `<button onclick="linkInstanceToActiveTenant('${inst.id}')" class="text-[10px] bg-slate-800 hover:bg-indigo-900 text-indigo-300 border border-indigo-700/50 px-2 py-0.5 rounded-full font-semibold transition">🔗 Vincular a ${currentTenant.name}</button>`
+                          : ''
+                      }
+                    </div>
+                    <div class="text-xs text-slate-400 mt-1">ID: <code>${inst.id}</code> ${inst.phone_number ? `• 📞 Conectado: <b class="text-emerald-300">${inst.phone_number}</b>` : ''}</div>
+                  </div>
+                  <span class="text-xs px-2.5 py-1 rounded-full font-semibold ${
+                    inst.status === 'CONNECTED'
+                      ? 'bg-emerald-950 text-emerald-400 border border-emerald-800'
+                      : inst.status === 'QR_READY'
+                        ? 'bg-amber-950 text-amber-300 border border-amber-700'
+                        : 'bg-slate-800 text-slate-300'
+                  }">${inst.status}</span>
+                </div>
+                ${inst.qr_code_base64 ? `
+                  <div class="bg-white p-4 rounded-xl flex flex-col items-center">
+                    <img src="${inst.qr_code_base64}" class="w-52 h-52" />
+                    <span class="text-xs text-slate-800 font-bold mt-2">📲 Abra o WhatsApp > Aparelhos Conectados > Conectar Aparelho</span>
+                  </div>
+                ` : ''}
+                <div class="flex flex-wrap gap-2 pt-1">
+                  <button onclick="connectInstance('${inst.id}')" class="flex-1 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-600/40 text-emerald-300 py-2 px-3 rounded-lg font-semibold transition">
+                    ${inst.status === 'CONNECTED' ? '🔄 Verificar Conexão' : '📱 Gerar QR Code / Conectar'}
+                  </button>
+                  <button onclick="resetInstanceQr('${inst.id}')" class="bg-amber-600/20 hover:bg-amber-600/30 border border-amber-600/40 text-amber-300 px-3 py-2 rounded-lg font-semibold transition" title="Limpa a autenticação atual e gera um novo QR Code">
+                    🔄 Trocar Aparelho / Novo QR
+                  </button>
+                  <button onclick="disconnectInstance('${inst.id}')" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-lg transition">
+                    ⏸️ Pausar
+                  </button>
+                  <button onclick="deleteInstance('${inst.id}', '${inst.name.replace(/'/g, '')}')" class="bg-rose-950/60 hover:bg-rose-900 border border-rose-800/60 text-rose-300 px-3 py-2 rounded-lg font-semibold transition">
+                    🗑️ Excluir Sessão
+                  </button>
+                </div>
+              </div>
+            `;
+          }).join('');
+
+      // Render Followups (Aba Ficha Viva)
+      document.getElementById('followups-list').innerHTML = flwRes.followups.length === 0
+        ? `<div class="bg-slate-900 border border-slate-800 rounded-xl p-8 text-center text-slate-500">
+             Nenhum follow-up pós-sessão pendente no momento.
+           </div>`
+        : flwRes.followups.map(f => `
+          <div class="bg-slate-900 border ${f.status === 'ALERT_TRIGGERED' ? 'border-rose-700' : 'border-slate-800'} rounded-xl p-4 space-y-2">
+            <div class="flex justify-between items-center">
+              <span class="font-bold text-sm text-white">${f.customer_name} (${f.customer_phone})</span>
+              <span class="text-xs px-2.5 py-0.5 rounded-full bg-slate-800 text-amber-300">${f.status}</span>
+            </div>
+            <div class="text-slate-300">💬 Mensagem enviada: "${f.message_sent}"</div>
+            ${f.customer_reply ? `<div class="text-emerald-300 font-medium">↪️ Resposta do cliente: "${f.customer_reply}" (Sentimento IA: ${f.ai_sentiment})</div>` : `
+              <div class="flex gap-2 pt-1">
+                <button onclick="simulateFollowupReply('${f.id}', 'Me senti super bem, relaxei bastante!')" class="bg-emerald-900/60 hover:bg-emerald-800 text-emerald-200 px-3 py-1.5 rounded-lg">
+                  Simular Resposta Positiva
+                </button>
+                <button onclick="simulateFollowupReply('${f.id}', 'Fiquei com dor forte e vermelhidão hoje')" class="bg-rose-900/60 hover:bg-rose-800 text-rose-200 px-3 py-1.5 rounded-lg">
+                  Simular Reação Adversa 🚨
+                </button>
+              </div>
+            `}
+          </div>
+        `).join('');
+
+      // Render Webhooks & Logs (Aba Integrações)
+      document.getElementById('webhooks-list').innerHTML = whRes.webhooks.length === 0
+        ? '<p class="text-slate-500 italic">Nenhum webhook externo cadastrado.</p>'
+        : whRes.webhooks.map(w => `
+          <div class="bg-slate-950 border border-slate-800 rounded-lg p-3 flex justify-between items-center">
+            <div>
+              <div class="font-semibold text-indigo-300">${w.target_system_name}</div>
+              <div class="text-[11px] text-slate-400">${w.webhook_url}</div>
+            </div>
+            <button onclick="deleteWebhook('${w.id}')" class="text-rose-400 hover:text-rose-300">Remover</button>
+          </div>
+        `).join('');
+
+      document.getElementById('logs-list').innerHTML = logsRes.logs.map(l => `
+        <div class="bg-slate-950 border border-slate-800 rounded-lg p-2.5 flex justify-between items-start gap-4">
+          <div class="whitespace-pre-wrap break-words">
+            <span class="font-bold ${l.direction === 'INBOUND' ? 'text-emerald-400' : 'text-sky-400'}">[${l.direction}]</span>
+            ${l.message_type === 'AUDIO' ? '<span class="bg-indigo-950 text-indigo-300 border border-indigo-700 px-1.5 py-0.5 rounded text-[10px] font-semibold ml-1">🎙️ ÁUDIO TRANSCRITO</span>' : ''}
+            <span class="text-slate-400 ml-1">${l.push_name || l.sender_phone}:</span>
+            <span class="text-slate-200 ml-1">${l.ai_transcription || l.raw_content || '(Mídia)'}</span>
+          </div>
+          <span class="text-[10px] text-slate-500 shrink-0">${l.created_at}</span>
+        </div>
+      `).join('');
+    }
+
+    function fillScenario(type) {
+      if (type === 'client_full') {
+        document.getElementById('sim-name').value = 'Ricardo Messias';
+        document.getElementById('sim-phone').value = '5511988887777';
+        document.getElementById('sim-text').value = 'Quero agendar uma Massagem com Pedras Quentes';
+      } else if (type === 'prof_dictation') {
+        document.getElementById('sim-name').value = 'Massoterapeuta ADEN';
+        document.getElementById('sim-phone').value = '5541991769268';
+        document.getElementById('sim-text').value = 'Atendi o cliente Ricardo hoje, fiz Massagem com Pedras Quentes 75min, relatou alívio total da tensão.';
+      } else if (type === 'prof_query') {
+        document.getElementById('sim-name').value = 'Massoterapeuta ADEN';
+        document.getElementById('sim-phone').value = '5541991769268';
+        document.getElementById('sim-text').value = '#ficha Ricardo';
+      }
+    }
+
+    async function simulateMessage(e) {
+      e.preventDefault();
+      const pushName = document.getElementById('sim-name').value;
+      const fromPhone = document.getElementById('sim-phone').value;
+      const text = document.getElementById('sim-text').value;
+      const currentTenant = cachedTenants.find(t => t.id === selectedTenantId);
+
+      const res = await fetch('/api/v1/messages/simulate-inbound', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          instanceId: currentTenant?.whatsapp_instance_id || 'inst_principal',
+          pushName,
+          fromPhone,
+          text
+        })
+      }).then(r => r.json());
+
+      const resEl = document.getElementById('sim-result');
+      resEl.classList.remove('hidden');
+      resEl.innerHTML = `<div class="font-bold text-emerald-400 mb-1">🤖 Resposta enviada:</div><div class="text-slate-100">${res.botReply || '(Silêncio contextual)'}</div>`;
+      loadAll();
+    }
+
+    async function sendDirectWhatsApp(e) {
+      e.preventDefault();
+      const toPhone = document.getElementById('direct-phone').value;
+      const text = document.getElementById('direct-text').value;
+      const currentTenant = cachedTenants.find(t => t.id === selectedTenantId);
+      const statusEl = document.getElementById('direct-status');
+      statusEl.classList.remove('hidden');
+      statusEl.textContent = 'Simulando digitação humana e enviando...';
+
+      const res = await fetch('/api/v1/messages/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          instanceId: currentTenant?.whatsapp_instance_id || 'inst_principal',
+          toPhone,
+          text
+        })
+      }).then(r => r.json());
+
+      statusEl.textContent = res.delivered ? `✅ Mensagem entregue para ${toPhone}!` : `⚠️ Registrada no log.`;
+      document.getElementById('direct-text').value = '';
+    }
+
+    async function createNewInstance(e) {
+      if (e && e.preventDefault) e.preventDefault();
+      const inputEl = document.getElementById('new-instance-name');
+      const currentTenant = cachedTenants.find(t => t.id === selectedTenantId);
+      const defaultName = currentTenant ? `Sessão ${currentTenant.name}` : 'Nova Sessão WhatsApp';
+      const name = (inputEl && inputEl.value.trim()) || prompt('Nome da nova sessão de WhatsApp:', defaultName);
+      if (!name) return;
+
+      await fetch('/api/v1/instances', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: name.trim(),
+          tenantId: selectedTenantId || undefined,
+          autoConnect: true
+        })
+      });
+
+      if (inputEl) inputEl.value = '';
+      await loadAll();
+      setTimeout(loadAll, 1500);
+      setTimeout(loadAll, 3500);
+    }
+
+    async function connectInstance(id) {
+      await fetch(`/api/v1/instances/${encodeURIComponent(id)}/connect`, { method: 'POST' });
+      setTimeout(loadAll, 1500);
+      setTimeout(loadAll, 3500);
+    }
+
+    async function resetInstanceQr(id) {
+      await fetch(`/api/v1/instances/${encodeURIComponent(id)}/reset-qr`, { method: 'POST' });
+      setTimeout(loadAll, 1500);
+      setTimeout(loadAll, 3500);
+    }
+
+    async function disconnectInstance(id) {
+      await fetch(`/api/v1/instances/${encodeURIComponent(id)}/disconnect`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ logout: false })
+      });
+      loadAll();
+    }
+
+    async function deleteInstance(id, name) {
+      if (!confirm(`Tem certeza que deseja EXCLUIR a sessão "${name}" (${id})?\n\nIsso encerrará a conexão atual e apagará os arquivos de sessão salvos.`)) {
+        return;
+      }
+      await fetch(`/api/v1/instances/${encodeURIComponent(id)}`, { method: 'DELETE' });
+      await loadAll();
+    }
+
+    async function linkInstanceToActiveTenant(instanceId) {
+      if (!selectedTenantId) return;
+      await fetch(`/api/v1/tenants/${selectedTenantId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ whatsappInstanceId: instanceId })
+      });
+      await loadAll();
+    }
+
+    async function dispatchFollowups() {
+      await fetch('/api/v1/followups/dispatch', { method: 'POST' });
+      loadAll();
+    }
+
+    async function simulateFollowupReply(id, replyText) {
+      await fetch(`/api/v1/followups/${id}/reply`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ replyText })
+      });
+      loadAll();
+    }
+
+    async function createWebhook(e) {
+      e.preventDefault();
+      await fetch('/api/v1/webhooks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          instanceId: 'inst_principal',
+          targetSystemName: document.getElementById('wh-system').value,
+          webhookUrl: document.getElementById('wh-url').value,
+          routingRules: document.getElementById('wh-prefix').value ? { prefix: document.getElementById('wh-prefix').value } : {}
+        })
+      });
+      e.target.reset();
+      loadAll();
+    }
+
+    async function deleteWebhook(id) {
+      await fetch(`/api/v1/webhooks/${id}`, { method: 'DELETE' });
+      loadAll();
+    }
+
+    async function loadBusinessReport() {
+      try {
+        const res = await fetch(`/api/v1/reports/business-summary?tenantId=${selectedTenantId}`).then(r => r.json());
+        if (!res || !res.metrics) return;
+
+        document.getElementById('rep-kpi-executions').textContent = res.metrics.totalExecutions;
+        document.getElementById('rep-kpi-upcoming').textContent = res.metrics.upcomingAppointmentsCount;
+        document.getElementById('rep-kpi-packages').textContent = res.metrics.activePackagesCount;
+        document.getElementById('rep-kpi-pkg-sessions').textContent = `${res.metrics.remainingPackageSessions} sessões restantes`;
+        document.getElementById('rep-kpi-revenue').textContent = `R$ ${res.metrics.totalContractedRevenue.toFixed(2).replace('.', ',')}`;
+        document.getElementById('rep-kpi-balance').textContent = `A receber: R$ ${res.metrics.balanceToReceive.toFixed(2).replace('.', ',')}`;
+
+        // Lista de próximos agendamentos
+        const upDiv = document.getElementById('rep-upcoming-list');
+        if (res.upcomingAppointments.length === 0) {
+          upDiv.innerHTML = '<p class="text-slate-500 italic">Nenhum agendamento futuro no momento.</p>';
+        } else {
+          upDiv.innerHTML = res.upcomingAppointments.map(a => `
+            <div class="bg-slate-950 border border-slate-800 rounded-lg p-2.5 flex justify-between items-center">
+              <div>
+                <div class="font-semibold text-white">${a.customerName}</div>
+                <div class="text-[11px] text-slate-400">${a.serviceName}</div>
+              </div>
+              <div class="text-right">
+                <span class="inline-block bg-sky-950 text-sky-400 border border-sky-800 px-2 py-0.5 rounded font-mono text-[11px]">
+                  ${a.dayLabel} às ${a.startTime}
+                </span>
+              </div>
+            </div>
+          `).join('');
+        }
+
+        // Lista de pacotes
+        const pkgDiv = document.getElementById('rep-packages-list');
+        if (res.activePackages.length === 0) {
+          pkgDiv.innerHTML = '<p class="text-slate-500 italic">Nenhum pacote ativo registrado.</p>';
+        } else {
+          pkgDiv.innerHTML = res.activePackages.map(p => `
+            <div class="bg-slate-950 border border-slate-800 rounded-lg p-2.5 flex justify-between items-center">
+              <div>
+                <div class="font-semibold text-purple-300">${p.customerName}</div>
+                <div class="text-[11px] text-slate-400">${p.packageName}</div>
+              </div>
+              <div class="text-right">
+                <span class="inline-block bg-purple-950 text-purple-300 border border-purple-800 px-2 py-0.5 rounded text-[11px] font-bold">
+                  ${p.sessionsRemaining} de ${p.totalSessions} restantes
+                </span>
+              </div>
+            </div>
+          `).join('');
+        }
+
+        // Procedimentos populares
+        const popDiv = document.getElementById('rep-popular-list');
+        if (res.popularServices.length === 0) {
+          popDiv.innerHTML = '<p class="text-slate-500 italic">Nenhum procedimento registrado.</p>';
+        } else {
+          popDiv.innerHTML = res.popularServices.map((s, idx) => `
+            <div class="flex items-center justify-between py-1.5 border-b border-slate-800 text-xs">
+              <span class="text-slate-300">${idx + 1}. ${s.serviceName}</span>
+              <span class="font-bold text-emerald-400">${s.count} atendimento(s)</span>
+            </div>
+          `).join('');
+        }
+
+        // Texto formatado
+        document.getElementById('rep-formatted-text').textContent = res.formattedReportText || '';
+      } catch (err) {
+        console.error('Erro ao carregar relatório do negócio:', err);
+      }
+    }
+
+    switchTab('prancheta');
+    loadAll();
+    loadBusinessReport();
+    setInterval(loadAll, 5000);
+    setInterval(loadBusinessReport, 8000);
+  </script>
+</body>
+</html>

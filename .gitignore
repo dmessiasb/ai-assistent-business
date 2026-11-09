@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Environment variables & API keys
+.env
+.env.local
+
+# WhatsApp session credentials & SQLite database
+data/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+
+# Git binary portable
+.git-bin/
+
+# Temporary / Scratch files & Logs
+scratch/
+*.log
+npm-debug.log*
+
+# OS / Editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

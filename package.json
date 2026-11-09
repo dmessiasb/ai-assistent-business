@@ -1,0 +1,29 @@
+{
+  "name": "atendimento-whatsapp-hub",
+  "version": "1.0.0",
+  "description": "WhatsApp & AI Core Hub + Plataforma Multi-Nicho de Fichas Inteligentes (Custo Zero / GCP e2-micro Ready)",
+  "main": "dist/server.js",
+  "type": "module",
+  "scripts": {
+    "dev": "node --env-file-if-exists=.env --watch src/server.ts",
+    "start": "node --env-file-if-exists=.env src/server.ts",
+    "build": "tsc",
+    "test:db": "node --env-file-if-exists=.env src/scripts/verify-setup.ts"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.16",
+    "pino": "^9.5.0",
+    "qrcode": "^1.5.4"
+  },
+  "overrides": {
+    "libsignal": "https://codeload.github.com/whiskeysockets/libsignal-node/tar.gz/master"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/qrcode": "^1.5.5",
+    "typescript": "^5.7.2"
+  },
+  "engines": {
+    "node": ">=22.6.0"
+  }
+}
