@@ -446,3 +446,9 @@
   - Realizado o commit inicial com 23 arquivos do projeto estruturados.
   - Executado com sucesso o push para a branch `main` em `origin`:
     - `https://github.com/dmessiasb/ai-assistent-business.git`
+
+
+### Fase 25: Criação da Branch de Refatoração Multi-Tenant (Concluída - 2026-11-09)
+- **Branch Criada:** `refactor/multi-tenant-architecture`.
+- **Origem Sincronizada:** Enviada e vinculada ao repositório remoto GitHub (`origin/refactor/multi-tenant-architecture`).
+- **Escopo Preparado:** Playbook de Refatoração Multi-Tenant para desacoplamento de regras hardcoded, tabela relacional `service_catalog`, generalização agnóstica do `gemini.service.ts` e injeção dinâmica de contexto com sliding window no `conversation.orchestrator.ts`.
