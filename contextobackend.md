@@ -510,6 +510,26 @@ Seguindo estritamente as diretrizes do Playbook Multi-Tenant fornecido pelo usu�
    - Testado o pipeline agnóstico do Gemini sem referências fixas no código-fonte.
    - Servidor reiniciado com sucesso em segundo plano na porta 3000.
 
+## [2026-11-10] Fase 29 - Painel Web Mobile-First, Responsividade Completa e Navegação por Abas
+Atendendo aos requisitos de uso via smartphone/Antigravity Remote:
+
+1. **Responsividade Mobile-First ([index.html](file:///c:/_dev/atendimento_whatsapp/public/index.html)):**
+   - **Menu Lateral Retrátil (Mobile Drawer):** Sidebar com botão hamburguer no cabeçalho e overlay escuro com fechamento ao toque ou seleção de tela.
+   - **Topbar Compacta:** Seletor de empresa e atalho para impressão com quebra inteligente e ajuste de escala para telas de celulares.
+   - **Kanban Touch-Friendly:** Container com scroll horizontal fluido (`scroll-snap-type: x mandatory`), colunas adaptadas (`min-w-[280px]`) e botões de atalho rápido em cada card para movimentação sem exigir drag-and-drop no touch.
+   - **Tabelas com Scroll Horizontal e Min-Width:** Tabelas de catálogo, fila noturna e consumo de tokens agora mantêm legibilidade sem quebras de layout.
+
+2. **Segregação de Visões por Categorias e Sub-Abas:**
+   - **Barra de Navegação Horizontal Rápida (Sub-Abas / Pills):** Adicionada abaixo do cabeçalho para acesso direto com 1 toque entre as áreas operacionais e analíticas.
+   - **Sub-Abas Internas na Tela de Configurações da Empresa:**
+     - 🏢 *Dados & IA* (Nome, nicho, credencial Gemini, vínculo de WhatsApp e cotas de tokens).
+     - 💆‍♀️ *Procedimentos & Preços* (Regras de Pix, percentual de sinal e tabela de serviços).
+     - 🗓️ *Horários da Maca* (Abertura/fechamento, almoço, buffer de higienização e dias de atendimento).
+     - 📱 *Expediente WhatsApp & Fila* (Horário comercial do bot, mensagem de fora do expediente e monitoramento de fila).
+
+3. **Validação de Acesso Remoto:**
+   - Testado e validado o túnel seguro Cloudflare HTTPS (`https://row-assume-james-blue.trycloudflare.com`).
+
 ## [2026-11-09] Fase 28 - Funil de Vendas Kanban Multi-Empresa e Gestão de Limites de Tokens
 Implementadas melhorias para permitir gestão visual de atendimentos por funil de vendas (Kanban), separação estrita de dados por empresa e governança do consumo de tokens de inteligência artificial:
 

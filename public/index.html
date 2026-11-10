@@ -2,32 +2,59 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SmartRecords & WhatsApp AI Hub — Painel Administrativo Multi-Empresa</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>SmartRecords & WhatsApp AI Hub — Painel Multi-Empresa</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Estilos para rolagem suave e kanban touch */
+    .kanban-scroll-container {
+      -webkit-overflow-scrolling: touch;
+      scroll-snap-type: x mandatory;
+    }
+    .kanban-col-card {
+      scroll-snap-align: start;
+    }
+    /* Esconder scrollbar mantendo navegabilidade */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex font-sans antialiased">
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col md:flex-row font-sans antialiased pb-16 md:pb-0">
+
+  <!-- OVERLAY MOBILE PARA SIDEBAR -->
+  <div id="mobile-sidebar-overlay" onclick="toggleMobileSidebar(false)" class="fixed inset-0 bg-black/70 z-40 hidden md:hidden backdrop-blur-sm transition-opacity"></div>
 
   <!-- ====================================================================== -->
-  <!-- SIDEBAR DE NAVEGAÇÃO LATERAL (ARQUITETURA MULTI-MÓDULO)                -->
+  <!-- SIDEBAR DE NAVEGAÇÃO (DESKTOP FIXO + DRAWER RETRÁTIL MOBILE)          -->
   <!-- ====================================================================== -->
-  <aside class="w-64 bg-slate-900 border-r border-slate-800 flex flex-col justify-between shrink-0 min-h-screen sticky top-0">
-    <div>
-      <!-- Logo / Marca -->
-      <div class="px-5 py-5 border-b border-slate-800 flex items-center gap-3">
-        <div class="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold text-lg">
-          ⚡
+  <aside id="main-sidebar" class="fixed md:sticky top-0 left-0 z-50 h-screen w-72 bg-slate-900 border-r border-slate-800 flex flex-col justify-between shrink-0 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out shadow-2xl md:shadow-none">
+    <div class="overflow-y-auto">
+      <!-- Logo / Marca + Fechar Mobile -->
+      <div class="px-5 py-4 border-b border-slate-800 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold text-lg">
+            ⚡
+          </div>
+          <div>
+            <div class="font-bold text-sm text-white tracking-tight">SmartRecords Hub</div>
+            <div class="text-[11px] text-slate-400">SaaS Multi-Empresa & IA</div>
+          </div>
         </div>
-        <div>
-          <div class="font-bold text-sm text-white tracking-tight">SmartRecords Hub</div>
-          <div class="text-[11px] text-slate-400">SaaS Multi-Empresa & IA</div>
-        </div>
+        <button onclick="toggleMobileSidebar(false)" class="md:hidden text-slate-400 hover:text-white p-1 rounded-lg">
+          ✕
+        </button>
       </div>
 
-      <!-- Menu de Módulos -->
-      <div class="px-3 py-4 space-y-1 text-xs">
-        <div class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-          Operação & Vendas
+      <!-- Menu de Módulos Estruturado -->
+      <div class="px-3 py-3 space-y-1 text-xs">
+        <!-- CATEGORIA 1: OPERAÇÃO & CLIENTES -->
+        <div class="px-3 pt-2 pb-1 text-[10px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+          <span>👥</span> Atendimento & Vendas
         </div>
         <button onclick="switchTab('kanban')" id="nav-kanban" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-left transition">
           <span>📌</span> Funil de Vendas (Kanban)
@@ -35,76 +62,122 @@
         <button onclick="switchTab('prancheta')" id="nav-prancheta" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-left transition">
           <span>📋</span> Prancheta Digital
         </button>
-        <button onclick="switchTab('relatorio')" id="nav-relatorio" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-left transition">
-          <span>📊</span> Relatório do Negócio
-        </button>
-        <button onclick="switchTab('tokens')" id="nav-tokens" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-left transition">
-          <span>🪙</span> Consumo de Tokens (IA)
-        </button>
         <button onclick="switchTab('ficha-viva')" id="nav-ficha-viva" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-left transition">
           <span>🔄</span> Ficha Viva (Pós-Sessão)
         </button>
 
-        <div class="px-3 pt-4 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-          Configuração por Empresa
+        <!-- CATEGORIA 2: GESTÃO & ANÁLISE -->
+        <div class="px-3 pt-4 pb-1 text-[10px] font-bold uppercase tracking-wider text-sky-400 flex items-center gap-1.5">
+          <span>📊</span> Métricas & Gestão
+        </div>
+        <button onclick="switchTab('relatorio')" id="nav-relatorio" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-left transition">
+          <span>📈</span> Relatório do Negócio
+        </button>
+        <button onclick="switchTab('tokens')" id="nav-tokens" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-left transition">
+          <span>🪙</span> Consumo de Tokens (IA)
+        </button>
+
+        <!-- CATEGORIA 3: CONFIGURAÇÃO DO NEGÓCIO -->
+        <div class="px-3 pt-4 pb-1 text-[10px] font-bold uppercase tracking-wider text-purple-400 flex items-center gap-1.5">
+          <span>🏢</span> Configuração da Empresa
         </div>
         <button onclick="switchTab('empresas')" id="nav-empresas" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-left transition">
-          <span>🏢</span> Empresas & Credenciais
+          <span>⚙️</span> Perfil, Agenda & Preços
         </button>
         <button onclick="switchTab('skills')" id="nav-skills" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-left transition">
-          <span>🛡️</span> Skill & Guardrails IA
+          <span>🛡️</span> Regras & Persona da IA
         </button>
         <button onclick="switchTab('whatsapp')" id="nav-whatsapp" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-left transition">
           <span>📱</span> Conexões WhatsApp
         </button>
 
-        <div class="px-3 pt-4 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-          Ecossistema & Testes
+        <!-- CATEGORIA 4: DESENVOLVEDOR & ECOSSISTEMA -->
+        <div class="px-3 pt-4 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+          <span>🔌</span> Ecossistema & Testes
         </div>
         <button onclick="switchTab('integracoes')" id="nav-integracoes" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-left transition">
-          <span>🔌</span> Webhooks & Simulador
+          <span>🧩</span> Webhooks & Simulador
         </button>
       </div>
     </div>
 
     <!-- Rodapé da Sidebar: Status de Recursos -->
-    <div class="p-4 border-t border-slate-800 bg-slate-950/50 text-[11px] space-y-1.5">
-      <div id="sidebar-health" class="text-slate-400">Verificando servidor...</div>
-      <div class="text-slate-500">Otimizado para GCP e2-micro</div>
+    <div class="p-3 border-t border-slate-800 bg-slate-950/70 text-[11px] space-y-1">
+      <div id="sidebar-health" class="text-slate-400 font-mono">Verificando servidor...</div>
+      <div class="text-slate-500 text-[10px]">Multi-Tenant • GCP Optimized</div>
     </div>
   </aside>
 
   <!-- ====================================================================== -->
-  <!-- ÁREA PRINCIPAL (TOPBAR + TELAS SEPARADAS)                              -->
+  <!-- ÁREA PRINCIPAL (HEADER RESPONSIVO + SUB-ABAS POR CATEGORIA + CONTEÚDO)  -->
   <!-- ====================================================================== -->
   <div class="flex-1 flex flex-col min-w-0">
 
-    <!-- TOPBAR GLOBAL COM SELETOR DE EMPRESA ATIVA -->
-    <header class="bg-slate-900/90 border-b border-slate-800 px-8 py-4 sticky top-0 z-10 backdrop-blur flex flex-wrap items-center justify-between gap-4">
-      <div class="flex items-center gap-4">
-        <div>
-          <label class="block text-[10px] uppercase tracking-wider font-bold text-slate-400">
-            🏢 Empresa Ativa no Painel
+    <!-- TOPBAR GLOBAL COM SELETOR DE EMPRESA ATIVA (COMPACTO NO MOBILE) -->
+    <header class="bg-slate-900/95 border-b border-slate-800 px-4 md:px-8 py-3 sticky top-0 z-20 backdrop-blur flex items-center justify-between gap-3">
+      <div class="flex items-center gap-3 flex-1 min-w-0">
+        <!-- Botão Menu Hamburguer Mobile -->
+        <button onclick="toggleMobileSidebar(true)" class="md:hidden bg-slate-800 hover:bg-slate-700 p-2 rounded-lg text-slate-200 border border-slate-700 shrink-0">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+        </button>
+
+        <!-- Seletor de Empresa -->
+        <div class="min-w-0 flex-1 sm:flex-initial">
+          <label class="hidden sm:block text-[10px] uppercase tracking-wider font-bold text-slate-400">
+            🏢 Empresa Ativa
           </label>
-          <div class="flex items-center gap-2 mt-0.5">
-            <select id="global-tenant-select" onchange="onSelectTenant(this.value)" class="bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-sm font-semibold text-emerald-400 focus:outline-none focus:border-emerald-500"></select>
-            <button onclick="openNewTenantModal()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-2.5 py-1.5 rounded-lg border border-slate-700 transition">
-              + Nova Empresa
+          <div class="flex items-center gap-2">
+            <select id="global-tenant-select" onchange="onSelectTenant(this.value)" class="w-full sm:w-auto bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1 text-xs sm:text-sm font-semibold text-emerald-400 focus:outline-none focus:border-emerald-500 truncate"></select>
+            <button onclick="openNewTenantModal()" title="Cadastrar Nova Empresa" class="shrink-0 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-2 py-1 rounded-lg border border-slate-700 transition">
+              +
             </button>
           </div>
         </div>
-        <div id="active-tenant-badges" class="hidden md:flex items-center gap-2 text-xs pl-3 border-l border-slate-800"></div>
+
+        <div id="active-tenant-badges" class="hidden xl:flex items-center gap-2 text-xs pl-3 border-l border-slate-800"></div>
       </div>
 
-      <div class="flex items-center gap-3">
-        <a id="btn-print-pdf" href="/api/v1/tenants/tenant_demo_estetica/print-preview" target="_blank" class="text-xs bg-teal-600 hover:bg-teal-500 text-white px-3.5 py-2 rounded-lg font-semibold transition flex items-center gap-1.5">
-          <span>🖨️</span> Bloco Físico + QR Code
+      <div class="flex items-center gap-2 shrink-0">
+        <a id="btn-print-pdf" href="/api/v1/tenants/tenant_demo_estetica/print-preview" target="_blank" class="text-xs bg-teal-600 hover:bg-teal-500 text-white px-2.5 sm:px-3.5 py-1.5 rounded-lg font-semibold transition flex items-center gap-1.5">
+          <span>🖨️</span> <span class="hidden sm:inline">Bloco Físico + QR Code</span>
         </a>
       </div>
     </header>
 
-    <!-- CONTEÚDO DAS TELAS -->
-    <main class="p-8 max-w-7xl w-full mx-auto space-y-6">
+    <!-- BARRA DE SUB-ABAS POR CATEGORIA (HORIZONTAL PILLS - RESPONSIVO) -->
+    <div class="bg-slate-900/60 border-b border-slate-800 px-4 md:px-8 py-2 overflow-x-auto no-scrollbar flex items-center gap-2">
+      <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mr-1 shrink-0">Navegação Rápida:</span>
+      <button onclick="switchTab('kanban')" id="subnav-kanban" class="subnav-pill text-xs px-3 py-1.5 rounded-full font-medium shrink-0 transition bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+        📌 Funil Kanban
+      </button>
+      <button onclick="switchTab('prancheta')" id="subnav-prancheta" class="subnav-pill text-xs px-3 py-1.5 rounded-full font-medium shrink-0 transition text-slate-400 hover:text-white hover:bg-slate-800">
+        📋 Prancheta
+      </button>
+      <button onclick="switchTab('ficha-viva')" id="subnav-ficha-viva" class="subnav-pill text-xs px-3 py-1.5 rounded-full font-medium shrink-0 transition text-slate-400 hover:text-white hover:bg-slate-800">
+        🔄 Ficha Viva
+      </button>
+      <button onclick="switchTab('relatorio')" id="subnav-relatorio" class="subnav-pill text-xs px-3 py-1.5 rounded-full font-medium shrink-0 transition text-slate-400 hover:text-white hover:bg-slate-800">
+        📊 Relatórios
+      </button>
+      <button onclick="switchTab('tokens')" id="subnav-tokens" class="subnav-pill text-xs px-3 py-1.5 rounded-full font-medium shrink-0 transition text-slate-400 hover:text-white hover:bg-slate-800">
+        🪙 Tokens IA
+      </button>
+      <button onclick="switchTab('empresas')" id="subnav-empresas" class="subnav-pill text-xs px-3 py-1.5 rounded-full font-medium shrink-0 transition text-slate-400 hover:text-white hover:bg-slate-800">
+        ⚙️ Config Empresa
+      </button>
+      <button onclick="switchTab('skills')" id="subnav-skills" class="subnav-pill text-xs px-3 py-1.5 rounded-full font-medium shrink-0 transition text-slate-400 hover:text-white hover:bg-slate-800">
+        🛡️ Regras IA
+      </button>
+      <button onclick="switchTab('whatsapp')" id="subnav-whatsapp" class="subnav-pill text-xs px-3 py-1.5 rounded-full font-medium shrink-0 transition text-slate-400 hover:text-white hover:bg-slate-800">
+        📱 WhatsApp
+      </button>
+      <button onclick="switchTab('integracoes')" id="subnav-integracoes" class="subnav-pill text-xs px-3 py-1.5 rounded-full font-medium shrink-0 transition text-slate-400 hover:text-white hover:bg-slate-800">
+        🔌 Webhooks
+      </button>
+    </div>
+
+    <!-- CONTEÚDO DAS TELAS COM PADDING RESPONSIVO (p-4 no mobile, p-8 no desktop) -->
+    <main class="p-4 sm:p-6 md:p-8 max-w-7xl w-full mx-auto space-y-6">
 
       <!-- ================================================================== -->
       <!-- TELA 0: FUNIL DE VENDAS & ATENDIMENTO (PAINEL KANBAN INTERATIVO)    -->
@@ -125,10 +198,10 @@
           </button>
         </div>
 
-        <!-- Grade Kanban em 4 Colunas -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
+        <!-- Grade Kanban em 4 Colunas (Scroll horizontal no mobile com snap) -->
+        <div class="flex md:grid md:grid-cols-4 gap-4 items-start overflow-x-auto pb-4 md:pb-0 kanban-scroll-container">
           <!-- Coluna 1: Em Atendimento / Conversa -->
-          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col min-h-[500px]">
+          <div class="kanban-col-card min-w-[280px] sm:min-w-[320px] md:min-w-0 w-full bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col min-h-[480px]">
             <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
               <div class="flex items-center gap-2">
                 <span class="w-3 h-3 rounded-full bg-sky-500"></span>
@@ -140,7 +213,7 @@
           </div>
 
           <!-- Coluna 2: Aguardando Sinal Pix -->
-          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col min-h-[500px]">
+          <div class="kanban-col-card min-w-[280px] sm:min-w-[320px] md:min-w-0 w-full bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col min-h-[480px]">
             <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
               <div class="flex items-center gap-2">
                 <span class="w-3 h-3 rounded-full bg-amber-500"></span>
@@ -152,7 +225,7 @@
           </div>
 
           <!-- Coluna 3: Agendado / Confirmado -->
-          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col min-h-[500px]">
+          <div class="kanban-col-card min-w-[280px] sm:min-w-[320px] md:min-w-0 w-full bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col min-h-[480px]">
             <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
               <div class="flex items-center gap-2">
                 <span class="w-3 h-3 rounded-full bg-emerald-500"></span>
@@ -164,7 +237,7 @@
           </div>
 
           <!-- Coluna 4: Finalizado / Cancelado -->
-          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col min-h-[500px]">
+          <div class="kanban-col-card min-w-[280px] sm:min-w-[320px] md:min-w-0 w-full bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col min-h-[480px]">
             <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
               <div class="flex items-center gap-2">
                 <span class="w-3 h-3 rounded-full bg-slate-500"></span>
@@ -201,321 +274,307 @@
       </section>
 
       <!-- ================================================================== -->
-      <!-- TELA 2: EMPRESAS & CREDENCIAIS (CHAVE IA + WHATSAPP + SEGURANÇA)   -->
+      <!-- TELA 2: EMPRESAS & CREDENCIAIS (ORGANIZADA EM SUB-ABAS)             -->
       <!-- ================================================================== -->
       <section id="view-empresas" class="tab-view hidden space-y-6">
         <div>
-          <h1 class="text-xl font-bold text-white">🏢 Perfil da Empresa, Chaves de IA & Segurança</h1>
+          <h1 class="text-xl font-bold text-white flex items-center gap-2">
+            <span>🏢</span> Perfil, Agenda & Configurações da Empresa
+          </h1>
           <p class="text-xs text-slate-400 mt-0.5">
-            Configure a Chave do Gemini, a Instância do WhatsApp, o Nicho e a Trava de Segurança exclusivamente para a empresa selecionada.
+            Gerencie os dados cadastrais, regras de preços, agenda física e expediente do WhatsApp da empresa ativa.
           </p>
         </div>
 
-        <form onsubmit="saveCompanyProfile(event)" class="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-6 text-xs">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div>
-              <label class="block text-slate-300 font-semibold mb-1.5">Nome da Empresa / Clínica</label>
-              <input id="emp-name" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm" />
-            </div>
-            <div>
-              <label class="block text-slate-300 font-semibold mb-1.5">Nicho / Modelo de Ficha (`VerticalPreset`)</label>
-              <select id="emp-preset" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm"></select>
-            </div>
-          </div>
-
-          <div class="border-t border-slate-800 pt-5">
-            <h3 class="text-sm font-bold text-indigo-400 mb-3">🔑 Credenciais de Inteligência Artificial (Exclusivas desta Empresa)</h3>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div class="md:col-span-2">
-                <label class="block text-slate-300 font-semibold mb-1">
-                  Chave da API Gemini (`AIzaSy...` do AI Studio ou `AQ....` do Vertex AI)
-                </label>
-                <input id="emp-ai-key" placeholder="Cole a chave Gemini exclusiva desta empresa..." class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-emerald-300 font-mono" />
-                <p class="text-[11px] text-slate-500 mt-1">
-                  Usada para transcrever áudios (`.ogg`), ler fotos de fichas e extrair respostas desta empresa.
-                </p>
-              </div>
-              <div>
-                <label class="block text-slate-300 font-semibold mb-1">Modelo Gemini</label>
-                <select id="emp-ai-model" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white">
-                  <option value="gemini-3.8-flash">gemini-3.8-flash (Recomendado - Transcrição & Áudio)</option>
-                  <option value="gemini-flash-latest">gemini-flash-latest</option>
-                  <option value="gemini-2.5-flash-lite">gemini-2.5-flash-lite (Ultra Rápido)</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          <div class="border-t border-slate-800 pt-5">
-            <h3 class="text-sm font-bold text-emerald-400 mb-3">📱 Vínculo de WhatsApp & Segurança de Mensagens</h3>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label class="block text-slate-300 font-semibold mb-1">Instância de WhatsApp da Empresa</label>
-                <select id="emp-wa-instance" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white"></select>
-              </div>
-              <div>
-                <label class="block text-slate-300 font-semibold mb-1">WhatsApp da Profissional (Modo Ditado)</label>
-                <input id="emp-owner-phone" placeholder="Ex: 5541991769268" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white" />
-              </div>
-              <div>
-                <label class="block text-slate-300 font-semibold mb-1">Modo de Segurança do Atendimento</label>
-                <select id="emp-sec-mode" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-amber-300 font-semibold">
-                  <option value="TEST_WHITELIST">🔒 Modo Teste (Apenas Contatos Autorizados)</option>
-                  <option value="PRODUCTION_ALL">🌐 Modo Produção (Atender Todos os Clientes)</option>
-                </select>
-              </div>
-            </div>
-
-            <div class="mt-4">
-              <label class="block text-slate-300 font-semibold mb-1">
-                Contatos Autorizados no Modo Teste (separados por vírgula — Nome, Telefone ou JID `@lid`)
-              </label>
-              <input id="emp-allowed-jids" placeholder="Ex: 237327075004656@lid, ricardo, 5511988887777" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono" />
-              <p class="text-[11px] text-slate-500 mt-1">
-                Enquanto estiver em <b>Modo Teste</b>, o assistente ignorará 100% de outras conversas e responderá apenas a quem estiver listado aqui.
-              </p>
-            </div>
-          </div>
-
-          <div class="border-t border-slate-800 pt-5">
-            <h3 class="text-sm font-bold text-amber-400 mb-3">💸 Configuração de Chave Pix & Sinal para Agendamento</h3>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label class="block text-slate-300 font-semibold mb-1">Exigir Sinal para Confirmar Horário?</label>
-                <select id="emp-require-pix" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-amber-300 font-semibold">
-                  <option value="0">✅ Não exigir sinal (Agendar direto)</option>
-                  <option value="1">💸 Sim — Exigir Sinal via Pix (Confirmar só após Profissional aprovar)</option>
-                </select>
-              </div>
-              <div>
-                <label class="block text-slate-300 font-semibold mb-1">Chave Pix da Empresa (CPF, CNPJ, Celular, E-mail ou Aleatória)</label>
-                <input id="emp-pix-key" placeholder="Ex: 41991769268 ou pix@adenmassoterapia.com.br" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono" />
-              </div>
-            <div>
-              <label class="block text-slate-300 font-semibold mb-1">Valor ou Percentual do Sinal</label>
-              <input id="emp-down-payment-info" oninput="renderServicesEditorTable()" placeholder="Ex: 30% do valor da sessão ou R$ 50,00" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white" />
-            </div>
-          </div>
-          <p class="text-[11px] text-slate-400 mt-2">
-            🔒 <b>Regra de Segurança:</b> Quando ativado, o sistema converte automaticamente o percentual no valor em Reais do serviço escolhido (<b>sempre arredondado</b>) e envia a Chave Pix ao cliente. O agendamento <b>só é efetivado quando você/profissional confirmar o pagamento</b> (em 1 clique na Prancheta Digital ou enviando <code>#confirmar Nome</code> no WhatsApp).
-          </p>
-        </div>
-
-        <div class="border-t border-slate-800 pt-5">
-          <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
-            <div>
-              <h3 class="text-sm font-bold text-emerald-400">💆‍♀️ Cadastro de Serviços, Valores & Cálculo Automático do Sinal (Arredondado)</h3>
-              <p class="text-[11px] text-slate-400">
-                Cadastre os procedimentos pelo Painel abaixo ou pelo próprio WhatsApp da profissional (basta enviar áudio ou texto: <i>"Quero cadastrar o serviço Nome por X reais Y minutos"</i> ou <code>#servicos</code>).
-              </p>
-            </div>
-            <button type="button" onclick="addServiceRow()" class="bg-emerald-700/40 hover:bg-emerald-600/60 border border-emerald-500/40 text-emerald-200 text-xs font-semibold px-3.5 py-1.5 rounded-lg transition">
-              + Adicionar Serviço
-            </button>
-          </div>
-
-          <div class="overflow-x-auto bg-slate-950 border border-slate-800 rounded-xl p-3">
-            <table class="w-full text-left text-xs">
-              <thead>
-                <tr class="text-slate-400 border-b border-slate-800">
-                  <th class="pb-2 pr-2">Nome do Serviço / Procedimento</th>
-                  <th class="pb-2 px-2 w-28">Duração (min)</th>
-                  <th class="pb-2 px-2 w-32">Valor Avulso (R$)</th>
-                  <th class="pb-2 px-2 w-36">Valor Pacote 4x (R$)</th>
-                  <th class="pb-2 px-2 w-44">Sinal Calculado (Arredondado)</th>
-                  <th class="pb-2 pl-2 w-16 text-right">Ação</th>
-                </tr>
-              </thead>
-              <tbody id="emp-services-tbody" class="divide-y divide-slate-900"></tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- ================================================================== -->
-        <!-- CONFIGURAÇÃO DA AGENDA DA MACA / DIAS E HORÁRIOS COM INTERVALO/BUFFER -->
-        <!-- ================================================================== -->
-        <div class="border-t border-slate-800 pt-5">
-          <div class="mb-3">
-            <h3 class="text-sm font-bold text-sky-400">🗓️ Dias e Horários de Atendimento na Maca (Agenda Física)</h3>
-            <p class="text-[11px] text-slate-400">
-              Configure em quais dias e horários você realiza atendimentos presenciais, o intervalo de almoço e o <b>buffer obrigatório entre atendimentos</b> para preparo e higienização da maca.
-            </p>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-4 gap-4 bg-slate-950 p-4 rounded-xl border border-slate-800 mb-3">
-            <div>
-              <label class="block text-slate-300 font-semibold mb-1 text-xs">Abertura da Maca</label>
-              <input type="time" id="emp-agenda-open" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono text-sm" value="08:30" />
-            </div>
-            <div>
-              <label class="block text-slate-300 font-semibold mb-1 text-xs">Fechamento da Maca</label>
-              <input type="time" id="emp-agenda-close" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono text-sm" value="19:30" />
-            </div>
-            <div>
-              <label class="block text-slate-300 font-semibold mb-1 text-xs">Almoço (Início)</label>
-              <input type="time" id="emp-agenda-lunch-start" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono text-sm" value="12:30" />
-            </div>
-            <div>
-              <label class="block text-slate-300 font-semibold mb-1 text-xs">Almoço (Fim)</label>
-              <input type="time" id="emp-agenda-lunch-end" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono text-sm" value="13:30" />
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950 p-4 rounded-xl border border-slate-800">
-            <div>
-              <label class="block text-slate-300 font-semibold mb-1 text-xs">
-                🛡️ Intervalo / Buffer Obrigatório entre Atendimentos (Minutos)
-              </label>
-              <div class="flex items-center gap-2">
-                <input type="number" id="emp-agenda-buffer" min="0" max="60" step="5" class="w-32 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-emerald-300 font-bold text-sm" value="15" />
-                <span class="text-xs text-slate-400">minutos entre um atendimento e o próximo</span>
-              </div>
-              <p class="text-[11px] text-slate-400 mt-1">
-                Garante que a maca nunca fique sobrecarregada, bloqueando conflitos e calculando slots livres com folga de preparo/higienização.
-              </p>
-            </div>
-            <div>
-              <label class="block text-slate-300 font-semibold mb-1 text-xs">Dias da Semana com Atendimento na Maca</label>
-              <div class="grid grid-cols-4 gap-2 pt-1 text-xs">
-                <label class="flex items-center gap-1.5 text-slate-300 cursor-pointer">
-                  <input type="checkbox" id="emp-agenda-day-1" class="rounded bg-slate-900 border-slate-700 text-sky-600 focus:ring-0" checked /> Seg
-                </label>
-                <label class="flex items-center gap-1.5 text-slate-300 cursor-pointer">
-                  <input type="checkbox" id="emp-agenda-day-2" class="rounded bg-slate-900 border-slate-700 text-sky-600 focus:ring-0" checked /> Ter
-                </label>
-                <label class="flex items-center gap-1.5 text-slate-300 cursor-pointer">
-                  <input type="checkbox" id="emp-agenda-day-3" class="rounded bg-slate-900 border-slate-700 text-sky-600 focus:ring-0" checked /> Qua
-                </label>
-                <label class="flex items-center gap-1.5 text-slate-300 cursor-pointer">
-                  <input type="checkbox" id="emp-agenda-day-4" class="rounded bg-slate-900 border-slate-700 text-sky-600 focus:ring-0" checked /> Qui
-                </label>
-                <label class="flex items-center gap-1.5 text-slate-300 cursor-pointer">
-                  <input type="checkbox" id="emp-agenda-day-5" class="rounded bg-slate-900 border-slate-700 text-sky-600 focus:ring-0" checked /> Sex
-                </label>
-                <label class="flex items-center gap-1.5 text-slate-300 cursor-pointer">
-                  <input type="checkbox" id="emp-agenda-day-6" class="rounded bg-slate-900 border-slate-700 text-sky-600 focus:ring-0" checked /> Sáb
-                </label>
-                <label class="flex items-center gap-1.5 text-rose-300 cursor-pointer">
-                  <input type="checkbox" id="emp-agenda-day-0" class="rounded bg-slate-900 border-slate-700 text-rose-600 focus:ring-0" /> Dom (Fechado)
-                </label>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- ================================================================== -->
-        <!-- CONFIGURAÇÃO DE HORÁRIO DO WHATSAPP & FILA NOTURNA INTELIGENTE    -->
-        <!-- ================================================================== -->
-        <div class="border-t border-slate-800 pt-5">
-          <div class="mb-3">
-            <h3 class="text-sm font-bold text-indigo-400">📱 Horário de Atendimento do WhatsApp & Fila Noturna Inteligente</h3>
-            <p class="text-[11px] text-slate-400">
-              O robô responde os clientes dentro do horário de suporte. Fora dele, as mensagens entram na fila noturna para serem respondidas no dia seguinte — <b>sempre respeitando a conversa manual da profissional</b>.
-            </p>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-950 p-4 rounded-xl border border-slate-800 mb-3">
-            <div>
-              <label class="block text-slate-300 font-semibold mb-1 text-xs">Ativar Controle de Horário do WhatsApp?</label>
-              <select id="emp-wa-hours-enabled" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-indigo-300 font-semibold text-sm">
-                <option value="1">✅ Ativo (Respeitar expediente e enfileirar à noite)</option>
-                <option value="0">24h Direto (Responder a qualquer hora)</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-slate-300 font-semibold mb-1 text-xs">Início do Expediente WhatsApp</label>
-              <input type="time" id="emp-wa-open" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono text-sm" value="08:00" />
-            </div>
-            <div>
-              <label class="block text-slate-300 font-semibold mb-1 text-xs">Término do Expediente WhatsApp</label>
-              <input type="time" id="emp-wa-close" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono text-sm" value="21:00" />
-            </div>
-          </div>
-
-          <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
-            <div class="flex items-center justify-between">
-              <label class="flex items-center gap-2 text-xs font-semibold text-slate-300 cursor-pointer">
-                <input type="checkbox" id="emp-wa-autoreply-out" class="rounded bg-slate-900 border-slate-700 text-indigo-600 focus:ring-0" checked />
-                <span>Enviar aviso automático amigável quando receber mensagem fora do expediente (máximo 1x a cada 12h por cliente)</span>
-              </label>
-            </div>
-            <div>
-              <label class="block text-slate-400 text-xs mb-1">Mensagem de Fora do Expediente:</label>
-              <textarea id="emp-wa-out-message" rows="2" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-white" placeholder="Olá! Meu horário de atendimento no WhatsApp é de segunda a sábado..."></textarea>
-            </div>
-            <div class="p-2.5 bg-indigo-950/40 border border-indigo-800/40 rounded-lg text-[11px] text-indigo-200">
-              🛡️ <b>Proteção de Intervenção Humana:</b> Se você (profissional) estiver conversando com o cliente no WhatsApp, o robô <b>nunca responde em cima</b> nem envia mensagens automáticas da fila. A sua conversa humana tem prioridade absoluta!
-            </div>
-          </div>
-        </div>
-
-        <div class="border-t border-slate-800 pt-5">
-          <h3 class="text-sm font-bold text-amber-400 mb-3">🪙 Cota & Limite Mensal de Tokens (IA)</h3>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label class="block text-slate-300 font-semibold mb-1">Limite Mensal de Tokens</label>
-              <input type="number" id="emp-monthly-token-limit" min="1000" step="10000" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono text-sm" value="500000" />
-              <p class="text-[11px] text-slate-500 mt-1">Ex: 500.000 tokens/mês (alerta quando atingir 80%).</p>
-            </div>
-            <div>
-              <label class="block text-slate-300 font-semibold mb-1">Tokens Consumidos no Mês Vigente</label>
-              <input type="number" id="emp-tokens-used-month" min="0" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-amber-300 font-mono text-sm" value="0" />
-              <p class="text-[11px] text-slate-500 mt-1">Atualizado automaticamente a cada resposta do Gemini.</p>
-            </div>
-            <div>
-              <label class="block text-slate-300 font-semibold mb-1">Provedor de IA</label>
-              <select id="emp-ai-provider" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm">
-                <option value="gemini">Google Gemini (Oficial)</option>
-                <option value="openai">OpenAI (Compatível)</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <div class="flex justify-end pt-3 border-t border-slate-800">
-          <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-6 py-2.5 rounded-lg transition">
-            💾 Salvar Configurações & Catálogo de Serviços
+        <!-- Sub-abas da Configuração da Empresa -->
+        <div class="flex items-center gap-2 border-b border-slate-800 pb-2 overflow-x-auto no-scrollbar">
+          <button type="button" onclick="switchCompanySubTab('perfil')" id="subtab-btn-perfil" class="company-subtab-btn text-xs px-3.5 py-1.5 rounded-lg font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 transition">
+            🏢 Dados & IA
+          </button>
+          <button type="button" onclick="switchCompanySubTab('servicos')" id="subtab-btn-servicos" class="company-subtab-btn text-xs px-3.5 py-1.5 rounded-lg font-semibold text-slate-400 hover:text-white hover:bg-slate-800 transition">
+            💆‍♀️ Procedimentos & Preços
+          </button>
+          <button type="button" onclick="switchCompanySubTab('agenda')" id="subtab-btn-agenda" class="company-subtab-btn text-xs px-3.5 py-1.5 rounded-lg font-semibold text-slate-400 hover:text-white hover:bg-slate-800 transition">
+            🗓️ Horários da Maca
+          </button>
+          <button type="button" onclick="switchCompanySubTab('whatsapp-hours')" id="subtab-btn-whatsapp-hours" class="company-subtab-btn text-xs px-3.5 py-1.5 rounded-lg font-semibold text-slate-400 hover:text-white hover:bg-slate-800 transition">
+            📱 Expediente WhatsApp & Fila
           </button>
         </div>
+
+        <form onsubmit="saveCompanyProfile(event)" class="bg-slate-900 border border-slate-800 rounded-xl p-4 sm:p-6 space-y-6 text-xs">
+          
+          <!-- SUB-SEÇÃO 1: DADOS BÁSICOS, IA E SEGURANÇA -->
+          <div id="company-subtab-perfil" class="company-subtab-content space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div>
+                <label class="block text-slate-300 font-semibold mb-1.5">Nome da Empresa / Clínica</label>
+                <input id="emp-name" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm" />
+              </div>
+              <div>
+                <label class="block text-slate-300 font-semibold mb-1.5">Nicho / Modelo de Ficha (`VerticalPreset`)</label>
+                <select id="emp-preset" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm"></select>
+              </div>
+            </div>
+
+            <div class="border-t border-slate-800 pt-5">
+              <h3 class="text-sm font-bold text-indigo-400 mb-3">🔑 Credenciais de Inteligência Artificial (Exclusivas desta Empresa)</h3>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="md:col-span-2">
+                  <label class="block text-slate-300 font-semibold mb-1">
+                    Chave da API Gemini (`AIzaSy...` do AI Studio ou `AQ....` do Vertex AI)
+                  </label>
+                  <input id="emp-ai-key" placeholder="Cole a chave Gemini exclusiva desta empresa..." class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-emerald-300 font-mono" />
+                  <p class="text-[11px] text-slate-500 mt-1">
+                    Usada para transcrever áudios (`.ogg`), ler fotos de fichas e extrair respostas desta empresa.
+                  </p>
+                </div>
+                <div>
+                  <label class="block text-slate-300 font-semibold mb-1">Modelo Gemini</label>
+                  <select id="emp-ai-model" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white">
+                    <option value="gemini-3.8-flash">gemini-3.8-flash (Recomendado - Transcrição & Áudio)</option>
+                    <option value="gemini-flash-latest">gemini-flash-latest</option>
+                    <option value="gemini-2.5-flash-lite">gemini-2.5-flash-lite (Ultra Rápido)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div class="border-t border-slate-800 pt-5">
+              <h3 class="text-sm font-bold text-emerald-400 mb-3">📱 Vínculo de WhatsApp & Segurança de Mensagens</h3>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label class="block text-slate-300 font-semibold mb-1">Instância de WhatsApp da Empresa</label>
+                  <select id="emp-wa-instance" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white"></select>
+                </div>
+                <div>
+                  <label class="block text-slate-300 font-semibold mb-1">WhatsApp da Profissional (Modo Ditado)</label>
+                  <input id="emp-owner-phone" placeholder="Ex: 5541991769268" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white" />
+                </div>
+                <div>
+                  <label class="block text-slate-300 font-semibold mb-1">Modo de Segurança do Atendimento</label>
+                  <select id="emp-sec-mode" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-amber-300 font-semibold">
+                    <option value="TEST_WHITELIST">🔒 Modo Teste (Apenas Contatos Autorizados)</option>
+                    <option value="PRODUCTION_ALL">🌐 Modo Produção (Atender Todos os Clientes)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="mt-4">
+                <label class="block text-slate-300 font-semibold mb-1">
+                  Contatos Autorizados no Modo Teste (separados por vírgula — Nome, Telefone ou JID `@lid`)
+                </label>
+                <input id="emp-allowed-jids" placeholder="Ex: 237327075004656@lid, ricardo, 5511988887777" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono" />
+                <p class="text-[11px] text-slate-500 mt-1">
+                  Enquanto estiver em <b>Modo Teste</b>, o assistente ignorará 100% de outras conversas e responderá apenas a quem estiver listado aqui.
+                </p>
+              </div>
+            </div>
+
+            <div class="border-t border-slate-800 pt-5">
+              <h3 class="text-sm font-bold text-amber-400 mb-3">🪙 Cota & Limite Mensal de Tokens (IA)</h3>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label class="block text-slate-300 font-semibold mb-1">Limite Mensal de Tokens</label>
+                  <input type="number" id="emp-monthly-token-limit" min="1000" step="10000" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono text-sm" value="500000" />
+                </div>
+                <div>
+                  <label class="block text-slate-300 font-semibold mb-1">Tokens Consumidos no Mês</label>
+                  <input type="number" id="emp-tokens-used-month" min="0" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-amber-300 font-mono text-sm" value="0" />
+                </div>
+                <div>
+                  <label class="block text-slate-300 font-semibold mb-1">Provedor de IA</label>
+                  <select id="emp-ai-provider" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm">
+                    <option value="gemini">Google Gemini (Oficial)</option>
+                    <option value="openai">OpenAI (Compatível)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SUB-SEÇÃO 2: PROCEDIMENTOS, VALORES E CHAVE PIX -->
+          <div id="company-subtab-servicos" class="company-subtab-content hidden space-y-6">
+            <div>
+              <h3 class="text-sm font-bold text-amber-400 mb-3">💸 Configuração de Chave Pix & Sinal para Agendamento</h3>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label class="block text-slate-300 font-semibold mb-1">Exigir Sinal para Confirmar Horário?</label>
+                  <select id="emp-require-pix" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-amber-300 font-semibold">
+                    <option value="0">✅ Não exigir sinal (Agendar direto)</option>
+                    <option value="1">💸 Sim — Exigir Sinal via Pix (Confirmar só após Profissional aprovar)</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-slate-300 font-semibold mb-1">Chave Pix da Empresa (CPF, CNPJ, Celular ou E-mail)</label>
+                  <input id="emp-pix-key" placeholder="Ex: 41991769268 ou pix@empresa.com.br" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono" />
+                </div>
+                <div>
+                  <label class="block text-slate-300 font-semibold mb-1">Valor ou Percentual do Sinal</label>
+                  <input id="emp-down-payment-info" oninput="renderServicesEditorTable()" placeholder="Ex: 30% do valor da sessão ou R$ 50,00" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white" />
+                </div>
+              </div>
+            </div>
+
+            <div class="border-t border-slate-800 pt-5">
+              <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+                <div>
+                  <h3 class="text-sm font-bold text-emerald-400">💆‍♀️ Procedimentos, Valores & Sinal Calculado</h3>
+                  <p class="text-[11px] text-slate-400">
+                    Defina o valor avulso, pacote e duração de cada procedimento.
+                  </p>
+                </div>
+                <button type="button" onclick="addServiceRow()" class="bg-emerald-700/40 hover:bg-emerald-600/60 border border-emerald-500/40 text-emerald-200 text-xs font-semibold px-3 py-1.5 rounded-lg transition">
+                  + Adicionar Serviço
+                </button>
+              </div>
+
+              <div class="overflow-x-auto bg-slate-950 border border-slate-800 rounded-xl p-3">
+                <table class="w-full text-left text-xs min-w-[600px]">
+                  <thead>
+                    <tr class="text-slate-400 border-b border-slate-800">
+                      <th class="pb-2 pr-2">Procedimento</th>
+                      <th class="pb-2 px-2 w-24">Duração (m)</th>
+                      <th class="pb-2 px-2 w-28">Avulso (R$)</th>
+                      <th class="pb-2 px-2 w-28">Pacote 4x (R$)</th>
+                      <th class="pb-2 px-2 w-36">Sinal Estimado</th>
+                      <th class="pb-2 pl-2 w-12 text-right">✕</th>
+                    </tr>
+                  </thead>
+                  <tbody id="emp-services-tbody" class="divide-y divide-slate-900"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- SUB-SEÇÃO 3: AGENDA DA MACA / BUFFER -->
+          <div id="company-subtab-agenda" class="company-subtab-content hidden space-y-6">
+            <div>
+              <h3 class="text-sm font-bold text-sky-400">🗓️ Dias e Horários de Atendimento na Maca (Agenda Física)</h3>
+              <p class="text-[11px] text-slate-400">
+                Configure os horários presenciais, intervalo de almoço e buffer de higienização da maca.
+              </p>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-950 p-4 rounded-xl border border-slate-800">
+              <div>
+                <label class="block text-slate-300 font-semibold mb-1 text-xs">Abertura Maca</label>
+                <input type="time" id="emp-agenda-open" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono text-sm" value="08:30" />
+              </div>
+              <div>
+                <label class="block text-slate-300 font-semibold mb-1 text-xs">Fechamento Maca</label>
+                <input type="time" id="emp-agenda-close" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono text-sm" value="19:30" />
+              </div>
+              <div>
+                <label class="block text-slate-300 font-semibold mb-1 text-xs">Almoço (Início)</label>
+                <input type="time" id="emp-agenda-lunch-start" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono text-sm" value="12:30" />
+              </div>
+              <div>
+                <label class="block text-slate-300 font-semibold mb-1 text-xs">Almoço (Fim)</label>
+                <input type="time" id="emp-agenda-lunch-end" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono text-sm" value="13:30" />
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950 p-4 rounded-xl border border-slate-800">
+              <div>
+                <label class="block text-slate-300 font-semibold mb-1 text-xs">
+                  🛡️ Buffer Obrigatório entre Atendimentos (Minutos)
+                </label>
+                <div class="flex items-center gap-2">
+                  <input type="number" id="emp-agenda-buffer" min="0" max="60" step="5" class="w-24 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-emerald-300 font-bold text-sm" value="15" />
+                  <span class="text-xs text-slate-400">minutos de intervalo</span>
+                </div>
+              </div>
+              <div>
+                <label class="block text-slate-300 font-semibold mb-1 text-xs">Dias de Atendimento na Maca</label>
+                <div class="grid grid-cols-4 gap-2 pt-1 text-xs">
+                  <label class="flex items-center gap-1.5 text-slate-300"><input type="checkbox" id="emp-agenda-day-1" class="rounded bg-slate-900 border-slate-700 text-sky-600" checked /> Seg</label>
+                  <label class="flex items-center gap-1.5 text-slate-300"><input type="checkbox" id="emp-agenda-day-2" class="rounded bg-slate-900 border-slate-700 text-sky-600" checked /> Ter</label>
+                  <label class="flex items-center gap-1.5 text-slate-300"><input type="checkbox" id="emp-agenda-day-3" class="rounded bg-slate-900 border-slate-700 text-sky-600" checked /> Qua</label>
+                  <label class="flex items-center gap-1.5 text-slate-300"><input type="checkbox" id="emp-agenda-day-4" class="rounded bg-slate-900 border-slate-700 text-sky-600" checked /> Qui</label>
+                  <label class="flex items-center gap-1.5 text-slate-300"><input type="checkbox" id="emp-agenda-day-5" class="rounded bg-slate-900 border-slate-700 text-sky-600" checked /> Sex</label>
+                  <label class="flex items-center gap-1.5 text-slate-300"><input type="checkbox" id="emp-agenda-day-6" class="rounded bg-slate-900 border-slate-700 text-sky-600" checked /> Sáb</label>
+                  <label class="flex items-center gap-1.5 text-rose-400"><input type="checkbox" id="emp-agenda-day-0" class="rounded bg-slate-900 border-slate-700 text-rose-600" /> Dom</label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SUB-SEÇÃO 4: EXPEDIENTE DO WHATSAPP & FILA NOTURNA -->
+          <div id="company-subtab-whatsapp-hours" class="company-subtab-content hidden space-y-6">
+            <div>
+              <h3 class="text-sm font-bold text-indigo-400">📱 Horário do WhatsApp & Fila Noturna</h3>
+              <p class="text-[11px] text-slate-400">
+                Respostas fora do expediente entram na fila e respeitam atendimento humano manual.
+              </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-950 p-4 rounded-xl border border-slate-800">
+              <div>
+                <label class="block text-slate-300 font-semibold mb-1 text-xs">Controle de Horário</label>
+                <select id="emp-wa-hours-enabled" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-indigo-300 font-semibold text-sm">
+                  <option value="1">✅ Ativo (Respeitar expediente)</option>
+                  <option value="0">24h Direto (Responder sempre)</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-slate-300 font-semibold mb-1 text-xs">Início Expediente</label>
+                <input type="time" id="emp-wa-open" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono text-sm" value="08:00" />
+              </div>
+              <div>
+                <label class="block text-slate-300 font-semibold mb-1 text-xs">Fim Expediente</label>
+                <input type="time" id="emp-wa-close" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono text-sm" value="21:00" />
+              </div>
+            </div>
+
+            <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
+              <label class="flex items-center gap-2 text-xs font-semibold text-slate-300 cursor-pointer">
+                <input type="checkbox" id="emp-wa-autoreply-out" class="rounded bg-slate-900 border-slate-700 text-indigo-600 focus:ring-0" checked />
+                <span>Enviar aviso amigável quando receber mensagem fora do expediente</span>
+              </label>
+              <textarea id="emp-wa-out-message" rows="2" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-white" placeholder="Olá! Meu horário de atendimento no WhatsApp é..."></textarea>
+            </div>
+          </div>
+
+          <div class="flex justify-end pt-3 border-t border-slate-800">
+            <button type="submit" class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-6 py-2.5 rounded-lg transition shadow-lg">
+              💾 Salvar Todas as Configurações
+            </button>
+          </div>
         </form>
 
-        <!-- ================================================================== -->
-        <!-- CARD DE MONITORAMENTO DA FILA DE FORA DE EXPEDIENTE               -->
-        <!-- ================================================================== -->
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
+        <!-- CARD DE MONITORAMENTO DA FILA -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl space-y-4">
           <div class="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 class="text-base font-bold text-white flex items-center gap-2">
-                <span>📥 Fila de Mensagens Noturnas / Fora de Expediente</span>
+                <span>📥 Fila de Mensagens Noturnas</span>
                 <span id="queue-count-badge" class="px-2 py-0.5 rounded-full text-xs font-mono bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">0</span>
               </h2>
-              <p class="text-xs text-slate-400">
-                Mensagens recebidas fora do horário de atendimento. Quando o expediente abre, são processadas respeitando conversas manuais existentes.
-              </p>
             </div>
             <div class="flex items-center gap-2">
-              <button type="button" onclick="loadQueue()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold px-3 py-1.5 rounded-lg transition">
-                🔄 Atualizar Fila
+              <button type="button" onclick="loadQueue()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-2.5 py-1.5 rounded-lg">
+                🔄 Atualizar
               </button>
-              <button type="button" onclick="processQueueNow()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-3.5 py-1.5 rounded-lg transition shadow">
-                ⚡ Processar Fila Agora
+              <button type="button" onclick="processQueueNow()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg">
+                ⚡ Processar Fila
               </button>
             </div>
           </div>
 
           <div class="overflow-x-auto bg-slate-950 border border-slate-800 rounded-xl p-3">
-            <table class="w-full text-left text-xs">
+            <table class="w-full text-left text-xs min-w-[500px]">
               <thead>
                 <tr class="text-slate-400 border-b border-slate-800">
                   <th class="pb-2 pr-2">Data/Hora</th>
                   <th class="pb-2 px-2">Cliente</th>
                   <th class="pb-2 px-2">Mensagem</th>
-                  <th class="pb-2 px-2 w-32">Status</th>
-                  <th class="pb-2 pl-2 w-32">Processado em</th>
+                  <th class="pb-2 px-2 w-28">Status</th>
+                  <th class="pb-2 pl-2 w-28">Processado</th>
                 </tr>
               </thead>
               <tbody id="queue-tbody" class="divide-y divide-slate-900">
-                <tr><td colspan="5" class="py-4 text-center text-slate-500 italic">Nenhuma mensagem enfileirada no momento.</td></tr>
+                <tr><td colspan="5" class="py-4 text-center text-slate-500 italic">Nenhuma mensagem enfileirada.</td></tr>
               </tbody>
             </table>
           </div>
@@ -649,7 +708,7 @@
             <span>🏢 Consumo e Limites por Empresa</span>
           </h2>
           <div class="overflow-x-auto bg-slate-950 border border-slate-800 rounded-xl p-3">
-            <table class="w-full text-left text-xs">
+            <table class="w-full text-left text-xs min-w-[550px]">
               <thead>
                 <tr class="text-slate-400 border-b border-slate-800">
                   <th class="pb-2 pr-3">Empresa</th>
@@ -836,19 +895,65 @@
     let cachedPresets = [];
     let cachedInstances = [];
 
+    function toggleMobileSidebar(open) {
+      const sidebar = document.getElementById('main-sidebar');
+      const overlay = document.getElementById('mobile-sidebar-overlay');
+      if (open) {
+        sidebar.classList.remove('-translate-x-full');
+        overlay.classList.remove('hidden');
+      } else {
+        sidebar.classList.add('-translate-x-full');
+        overlay.classList.add('hidden');
+      }
+    }
+
     function switchTab(tabName) {
       currentTab = tabName;
       document.querySelectorAll('.tab-view').forEach(el => el.classList.add('hidden'));
-      document.getElementById(`view-${tabName}`).classList.remove('hidden');
+      const targetView = document.getElementById(`view-${tabName}`);
+      if (targetView) targetView.classList.remove('hidden');
 
+      // Atualiza botões da sidebar
       document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.classList.remove('bg-emerald-500/15', 'text-emerald-400', 'border', 'border-emerald-500/30');
         btn.classList.add('text-slate-400', 'hover:bg-slate-800/60', 'hover:text-white');
       });
-
       const activeBtn = document.getElementById(`nav-${tabName}`);
       if (activeBtn) {
         activeBtn.classList.remove('text-slate-400', 'hover:bg-slate-800/60', 'hover:text-white');
+        activeBtn.classList.add('bg-emerald-500/15', 'text-emerald-400', 'border', 'border-emerald-500/30');
+      }
+
+      // Atualiza pills horizontais da sub-barra
+      document.querySelectorAll('.subnav-pill').forEach(pill => {
+        pill.classList.remove('bg-emerald-500/15', 'text-emerald-400', 'border', 'border-emerald-500/30');
+        pill.classList.add('text-slate-400', 'hover:text-white', 'hover:bg-slate-800');
+      });
+      const activePill = document.getElementById(`subnav-${tabName}`);
+      if (activePill) {
+        activePill.classList.remove('text-slate-400', 'hover:text-white', 'hover:bg-slate-800');
+        activePill.classList.add('bg-emerald-500/15', 'text-emerald-400', 'border', 'border-emerald-500/30');
+        // Rola o pill ativo para a visão no mobile
+        activePill.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      }
+
+      // Fecha o drawer mobile ao clicar em um item
+      toggleMobileSidebar(false);
+    }
+
+    // Gerenciador de Sub-Abas da Configuração da Empresa
+    function switchCompanySubTab(subTabName) {
+      document.querySelectorAll('.company-subtab-content').forEach(el => el.classList.add('hidden'));
+      const target = document.getElementById(`company-subtab-${subTabName}`);
+      if (target) target.classList.remove('hidden');
+
+      document.querySelectorAll('.company-subtab-btn').forEach(btn => {
+        btn.classList.remove('bg-emerald-500/15', 'text-emerald-400', 'border', 'border-emerald-500/30');
+        btn.classList.add('text-slate-400', 'hover:text-white', 'hover:bg-slate-800');
+      });
+      const activeBtn = document.getElementById(`subtab-btn-${subTabName}`);
+      if (activeBtn) {
+        activeBtn.classList.remove('text-slate-400', 'hover:text-white', 'hover:bg-slate-800');
         activeBtn.classList.add('bg-emerald-500/15', 'text-emerald-400', 'border', 'border-emerald-500/30');
       }
     }
