@@ -567,6 +567,26 @@ export const server = http.createServer(async (req, res) => {
           tenantId
         );
       }
+      if (body.monthlyTokenLimit !== undefined) {
+        db.prepare(`UPDATE tenants SET monthly_token_limit = ? WHERE id = ?`).run(
+          Math.max(1000, Number(body.monthlyTokenLimit) || 500000),
+          tenantId
+        );
+      }
+      if (body.tokensUsedMonth !== undefined) {
+        db.prepare(`UPDATE tenants SET tokens_used_month = ? WHERE id = ?`).run(
+          Math.max(0, Number(body.tokensUsedMonth) || 0),
+          tenantId
+        );
+      }
+      if (body.humanHandoffConfig !== undefined) {
+        db.prepare(`UPDATE tenants SET human_handoff_config = ? WHERE id = ?`).run(
+          typeof body.humanHandoffConfig === 'string'
+            ? body.humanHandoffConfig
+            : JSON.stringify(body.humanHandoffConfig),
+          tenantId
+        );
+      }
       const updatedConfig = schemaEngine.getTenantConfig(tenantId);
       if (updatedConfig?.whatsappInstanceId) {
         whatsappManager
@@ -597,6 +617,68 @@ export const server = http.createServer(async (req, res) => {
         recordId,
       });
       sendJson(res, 200, confirmed);
+      return;
+    }
+
+    // Endpoint para atualizar etapa do cliente / ficha (Kanban / Funil de Vendas)
+    const updateRecordStatusMatch = pathname.match(/^\/api\/v1\/records\/([^/]+)\/status$/);
+    if (method === 'PATCH' && updateRecordStatusMatch) {
+      const recordId = updateRecordStatusMatch[1];
+      const body = await readJsonBody(req);
+      const newStatus = String(body.status || '').trim();
+      const validStatuses = ['IN_PROGRESS', 'PENDING_PAYMENT', 'COMPLETED', 'CANCELLED'];
+      if (!validStatuses.includes(newStatus)) {
+        sendJson(res, 400, { error: `Status inválido. Escolha um dos seguintes: ${validStatuses.join(', ')}` });
+        return;
+      }
+      db.prepare(`UPDATE dynamic_records SET status = ?, updated_at = datetime('now') WHERE id = ?`).run(
+        newStatus,
+        recordId
+      );
+      sendJson(res, 200, { success: true, recordId, status: newStatus });
+      return;
+    }
+
+    // Endpoint para relatório e métricas gerais e por empresa de consumo de Tokens
+    if (method === 'GET' && pathname === '/api/v1/tokens/usage') {
+      const tenantRows = db.prepare(`
+        SELECT id, name, ai_provider, ai_model, monthly_token_limit, tokens_used_month, created_at
+        FROM tenants
+        ORDER BY name ASC
+      `).all() as Array<{
+        id: string;
+        name: string;
+        ai_provider: string;
+        ai_model: string;
+        monthly_token_limit: number;
+        tokens_used_month: number;
+        created_at: string;
+      }>;
+
+      const totalTokensUsed = tenantRows.reduce((acc, t) => acc + (Number(t.tokens_used_month) || 0), 0);
+      const totalTokenLimit = tenantRows.reduce((acc, t) => acc + (Number(t.monthly_token_limit) || 0), 0);
+
+      sendJson(res, 200, {
+        summary: {
+          totalTokensUsed,
+          totalTokenLimit,
+          percentageUsed: totalTokenLimit > 0 ? Math.round((totalTokensUsed / totalTokenLimit) * 100) : 0,
+          totalTenants: tenantRows.length,
+        },
+        tenants: tenantRows.map((t) => {
+          const used = Number(t.tokens_used_month) || 0;
+          const limit = Number(t.monthly_token_limit) || 500000;
+          const percent = limit > 0 ? Math.round((used / limit) * 100) : 0;
+          return {
+            ...t,
+            tokens_used_month: used,
+            monthly_token_limit: limit,
+            percentage_used: percent,
+            remaining_tokens: Math.max(0, limit - used),
+            is_limit_reached: used >= limit,
+          };
+        }),
+      });
       return;
     }
 

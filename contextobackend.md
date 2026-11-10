@@ -509,3 +509,34 @@ Seguindo estritamente as diretrizes do Playbook Multi-Tenant fornecido pelo usu�
    - Validada a injeção do catálogo relacional no prompt dinâmico.
    - Testado o pipeline agnóstico do Gemini sem referências fixas no código-fonte.
    - Servidor reiniciado com sucesso em segundo plano na porta 3000.
+
+## [2026-11-09] Fase 28 - Funil de Vendas Kanban Multi-Empresa e Gestão de Limites de Tokens
+Implementadas melhorias para permitir gestão visual de atendimentos por funil de vendas (Kanban), separação estrita de dados por empresa e governança do consumo de tokens de inteligência artificial:
+
+1. **Funil de Vendas Kanban Multi-Empresa ([server.ts](file:///c:/_dev/atendimento_whatsapp/src/server.ts) & [index.html](file:///c:/_dev/atendimento_whatsapp/public/index.html)):**
+   - **Novo Endpoint `PATCH /api/v1/records/:id/status`**: Atualiza a etapa do atendimento no banco de dados (`IN_PROGRESS`, `PENDING_PAYMENT`, `COMPLETED`, `CANCELLED`).
+   - **Painel Visual Kanban**:
+     - Criadas 4 colunas com cores e contadores em tempo real:
+       - 💬 *Em Atendimento* (`IN_PROGRESS` - azul)
+       - ⏳ *Aguardando Sinal / Pix* (`PENDING_PAYMENT` - amarelo)
+       - ✅ *Confirmado / Concluído* (`COMPLETED` - verde)
+       - ❌ *Cancelado* (`CANCELLED` - vermelho)
+     - Cards de atendimento com dados essenciais: Nome do cliente, telefone, procedimento, data/horário e badges de alertas clínicos.
+     - Suporte a **Drag-and-Drop nativo HTML5** para arrastar e soltar clientes entre as etapas.
+     - Botões de atalho rápido em cada card para movimentação com 1 clique (para mobile e agilidade).
+
+2. **Isolamento e Acesso Específico por Empresa (Multi-Tenant):**
+   - O seletor global de empresa no topo do painel filtra estritamente:
+     - Atendimentos da Prancheta
+     - Agenda / Horários do dia
+     - Funil de Vendas Kanban
+     - Métricas e consumo de tokens
+   - As consultas para `/api/v1/records?tenantId=...` respeitam a empresa selecionada, garantindo privacidade e separação dos dados entre diferentes negócios.
+
+3. **Painel de Consumo e Limite de Tokens de IA:**
+   - **Novo Endpoint `GET /api/v1/tokens/usage`**: Retorna métricas agregadas globais (`totalTokensUsed`, `totalTokenLimit`, `% global`) e detalhamento individual por empresa (`monthly_token_limit`, `tokens_used_month`, `% usado`, `remaining_tokens`, `is_limit_reached`).
+   - **Visão Dedicada "🪙 Consumo de Tokens (IA)"**:
+     - 4 Cards de KPI no topo: Total de Tokens Consumidos, Limite Contratado Global, % de Uso do Sistema e Empresas Monitoradas.
+     - Tabela detalhada por empresa exibindo provedor, modelo de IA configurado, contadores numéricos, barra de progresso visual (verde, amarela ou vermelha de acordo com o consumo) e status de cota.
+     - Ação direta para ajustar o limite mensal contratado (`PATCH /api/v1/tenants/:id`) com feedback imediato.
+   - Atualizado o modal/formulário de edição de empresas para inclusão dos parâmetros de IA e cotas.

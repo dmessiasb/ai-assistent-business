@@ -27,13 +27,19 @@
       <!-- Menu de Módulos -->
       <div class="px-3 py-4 space-y-1 text-xs">
         <div class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-          Operação da Clínica
+          Operação & Vendas
         </div>
+        <button onclick="switchTab('kanban')" id="nav-kanban" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-left transition">
+          <span>📌</span> Funil de Vendas (Kanban)
+        </button>
         <button onclick="switchTab('prancheta')" id="nav-prancheta" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-left transition">
           <span>📋</span> Prancheta Digital
         </button>
         <button onclick="switchTab('relatorio')" id="nav-relatorio" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-left transition">
           <span>📊</span> Relatório do Negócio
+        </button>
+        <button onclick="switchTab('tokens')" id="nav-tokens" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-left transition">
+          <span>🪙</span> Consumo de Tokens (IA)
         </button>
         <button onclick="switchTab('ficha-viva')" id="nav-ficha-viva" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-left transition">
           <span>🔄</span> Ficha Viva (Pós-Sessão)
@@ -98,12 +104,83 @@
     </header>
 
     <!-- CONTEÚDO DAS TELAS -->
-    <main class="p-8 max-w-6xl w-full mx-auto space-y-6">
+    <main class="p-8 max-w-7xl w-full mx-auto space-y-6">
+
+      <!-- ================================================================== -->
+      <!-- TELA 0: FUNIL DE VENDAS & ATENDIMENTO (PAINEL KANBAN INTERATIVO)    -->
+      <!-- ================================================================== -->
+      <section id="view-kanban" class="tab-view space-y-6">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h1 class="text-xl font-bold text-white flex items-center gap-2">
+              <span>📌 Funil de Vendas & Atendimento</span>
+              <span id="kanban-tenant-pill" class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/20"></span>
+            </h1>
+            <p class="text-xs text-slate-400 mt-0.5">
+              Arraste ou clique para mover clientes entre as etapas do funil de atendimento. Filtro estrito para a empresa ativa.
+            </p>
+          </div>
+          <button onclick="loadAll()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-2 rounded-lg border border-slate-700">
+            🔄 Atualizar Funil
+          </button>
+        </div>
+
+        <!-- Grade Kanban em 4 Colunas -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
+          <!-- Coluna 1: Em Atendimento / Conversa -->
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col min-h-[500px]">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
+              <div class="flex items-center gap-2">
+                <span class="w-3 h-3 rounded-full bg-sky-500"></span>
+                <span class="font-bold text-xs text-white">1. Em Conversa</span>
+              </div>
+              <span id="badge-count-IN_PROGRESS" class="px-2 py-0.5 text-[11px] rounded-full bg-sky-500/10 text-sky-300 border border-sky-500/20 font-bold font-mono">0</span>
+            </div>
+            <div id="col-IN_PROGRESS" class="kanban-col space-y-3 flex-1" ondragover="allowDrop(event)" ondrop="handleDrop(event, 'IN_PROGRESS')"></div>
+          </div>
+
+          <!-- Coluna 2: Aguardando Sinal Pix -->
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col min-h-[500px]">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
+              <div class="flex items-center gap-2">
+                <span class="w-3 h-3 rounded-full bg-amber-500"></span>
+                <span class="font-bold text-xs text-white">2. Aguardando Sinal Pix</span>
+              </div>
+              <span id="badge-count-PENDING_PAYMENT" class="px-2 py-0.5 text-[11px] rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/20 font-bold font-mono">0</span>
+            </div>
+            <div id="col-PENDING_PAYMENT" class="kanban-col space-y-3 flex-1" ondragover="allowDrop(event)" ondrop="handleDrop(event, 'PENDING_PAYMENT')"></div>
+          </div>
+
+          <!-- Coluna 3: Agendado / Confirmado -->
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col min-h-[500px]">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
+              <div class="flex items-center gap-2">
+                <span class="w-3 h-3 rounded-full bg-emerald-500"></span>
+                <span class="font-bold text-xs text-white">3. Confirmado / Agendado</span>
+              </div>
+              <span id="badge-count-COMPLETED" class="px-2 py-0.5 text-[11px] rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 font-bold font-mono">0</span>
+            </div>
+            <div id="col-COMPLETED" class="kanban-col space-y-3 flex-1" ondragover="allowDrop(event)" ondrop="handleDrop(event, 'COMPLETED')"></div>
+          </div>
+
+          <!-- Coluna 4: Finalizado / Cancelado -->
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col min-h-[500px]">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
+              <div class="flex items-center gap-2">
+                <span class="w-3 h-3 rounded-full bg-slate-500"></span>
+                <span class="font-bold text-xs text-white">4. Cancelado / Encerrado</span>
+              </div>
+              <span id="badge-count-CANCELLED" class="px-2 py-0.5 text-[11px] rounded-full bg-slate-500/10 text-slate-300 border border-slate-500/20 font-bold font-mono">0</span>
+            </div>
+            <div id="col-CANCELLED" class="kanban-col space-y-3 flex-1" ondragover="allowDrop(event)" ondrop="handleDrop(event, 'CANCELLED')"></div>
+          </div>
+        </div>
+      </section>
 
       <!-- ================================================================== -->
       <!-- TELA 1: PRANCHETA DIGITAL (OPERAÇÃO DO PROFISSIONAL)               -->
       <!-- ================================================================== -->
-      <section id="view-prancheta" class="tab-view space-y-6">
+      <section id="view-prancheta" class="tab-view hidden space-y-6">
         <div class="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 class="text-xl font-bold text-white">📋 Prancheta Digital de Atendimento</h1>
@@ -372,6 +449,29 @@
           </div>
         </div>
 
+        <div class="border-t border-slate-800 pt-5">
+          <h3 class="text-sm font-bold text-amber-400 mb-3">🪙 Cota & Limite Mensal de Tokens (IA)</h3>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-slate-300 font-semibold mb-1">Limite Mensal de Tokens</label>
+              <input type="number" id="emp-monthly-token-limit" min="1000" step="10000" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono text-sm" value="500000" />
+              <p class="text-[11px] text-slate-500 mt-1">Ex: 500.000 tokens/mês (alerta quando atingir 80%).</p>
+            </div>
+            <div>
+              <label class="block text-slate-300 font-semibold mb-1">Tokens Consumidos no Mês Vigente</label>
+              <input type="number" id="emp-tokens-used-month" min="0" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-amber-300 font-mono text-sm" value="0" />
+              <p class="text-[11px] text-slate-500 mt-1">Atualizado automaticamente a cada resposta do Gemini.</p>
+            </div>
+            <div>
+              <label class="block text-slate-300 font-semibold mb-1">Provedor de IA</label>
+              <select id="emp-ai-provider" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm">
+                <option value="gemini">Google Gemini (Oficial)</option>
+                <option value="openai">OpenAI (Compatível)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
         <div class="flex justify-end pt-3 border-t border-slate-800">
           <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-6 py-2.5 rounded-lg transition">
             💾 Salvar Configurações & Catálogo de Serviços
@@ -502,6 +602,68 @@
               </button>
               <div id="direct-status" class="text-xs text-emerald-300 hidden"></div>
             </form>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================================================================== -->
+      <!-- TELA 5: CONSUMO GERAL & POR EMPRESA DE TOKENS (IA)                  -->
+      <!-- ================================================================== -->
+      <section id="view-tokens" class="tab-view hidden space-y-6">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h1 class="text-xl font-bold text-white flex items-center gap-2">
+              <span>🪙 Gestão de Tokens & Cotas de IA</span>
+            </h1>
+            <p class="text-xs text-slate-400 mt-0.5">
+              Monitore o consumo consolidado e individual de tokens consumidos pelas chamadas ao Gemini em cada empresa.
+            </p>
+          </div>
+          <button onclick="loadTokensUsage()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-2 rounded-lg border border-slate-700">
+            🔄 Atualizar Métricas
+          </button>
+        </div>
+
+        <!-- Cards de Resumo Global -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4" id="tokens-global-kpis">
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+            <span class="text-slate-400 text-xs font-medium">Consumo Total de Tokens</span>
+            <div id="kpi-total-tokens-used" class="text-2xl font-bold font-mono text-amber-400 mt-1">0</div>
+            <span class="text-[11px] text-slate-500">Somatório de todas as empresas</span>
+          </div>
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+            <span class="text-slate-400 text-xs font-medium">Capacidade / Limite Contratado</span>
+            <div id="kpi-total-tokens-limit" class="text-2xl font-bold font-mono text-emerald-400 mt-1">0</div>
+            <span class="text-[11px] text-slate-500">Teto mensal acumulado</span>
+          </div>
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+            <span class="text-slate-400 text-xs font-medium">Taxa de Uso Global</span>
+            <div id="kpi-total-tokens-percent" class="text-2xl font-bold font-mono text-sky-400 mt-1">0%</div>
+            <span class="text-[11px] text-slate-500">Percentual da cota global utilizado</span>
+          </div>
+        </div>
+
+        <!-- Tabela por Empresa -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
+          <h2 class="text-base font-bold text-white flex items-center gap-2">
+            <span>🏢 Consumo e Limites por Empresa</span>
+          </h2>
+          <div class="overflow-x-auto bg-slate-950 border border-slate-800 rounded-xl p-3">
+            <table class="w-full text-left text-xs">
+              <thead>
+                <tr class="text-slate-400 border-b border-slate-800">
+                  <th class="pb-2 pr-3">Empresa</th>
+                  <th class="pb-2 px-3">Provedor & Modelo</th>
+                  <th class="pb-2 px-3">Tokens Usados (Mês)</th>
+                  <th class="pb-2 px-3">Limite Mensal</th>
+                  <th class="pb-2 px-3 w-48">Uso da Cota</th>
+                  <th class="pb-2 pl-3 text-right">Ação</th>
+                </tr>
+              </thead>
+              <tbody id="tokens-table-tbody" class="divide-y divide-slate-900">
+                <tr><td colspan="6" class="py-4 text-center text-slate-500 italic">Carregando métricas...</td></tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </section>
@@ -815,6 +977,9 @@
         document.getElementById('emp-require-pix').value = tenant.require_down_payment ? '1' : '0';
         document.getElementById('emp-pix-key').value = tenant.pix_key || '';
         document.getElementById('emp-down-payment-info').value = tenant.down_payment_info || '30% do valor da sessão';
+        document.getElementById('emp-monthly-token-limit').value = tenant.monthly_token_limit || 500000;
+        document.getElementById('emp-tokens-used-month').value = tenant.tokens_used_month || 0;
+        document.getElementById('emp-ai-provider').value = tenant.ai_provider || 'gemini';
 
         try {
           const parsedSrv = JSON.parse(tenant.services_catalog || '[]');
@@ -919,6 +1084,9 @@
         requireDownPayment: document.getElementById('emp-require-pix').value === '1',
         pixKey: document.getElementById('emp-pix-key').value,
         downPaymentInfo: document.getElementById('emp-down-payment-info').value,
+        monthlyTokenLimit: Number(document.getElementById('emp-monthly-token-limit').value) || 500000,
+        tokensUsedMonth: Number(document.getElementById('emp-tokens-used-month').value) || 0,
+        aiProvider: document.getElementById('emp-ai-provider').value,
         servicesCatalog: editingServicesCatalog,
         agendaConfig,
         whatsappHoursConfig,
@@ -1169,6 +1337,9 @@
             ` : ''}
           </div>
         `).join('');
+
+      // RENDER KANBAN BOARD (Funil de Vendas com Drag-and-Drop)
+      renderKanbanBoard(recordsRes.records);
 
       // Render Instances (Aba WhatsApp)
       document.getElementById('instances-list').innerHTML = cachedInstances.length === 0
@@ -1512,11 +1683,195 @@
       }
     }
 
-    switchTab('prancheta');
+    // ========================================================================
+    // MOTOR KANBAN DE ATENDIMENTO & FUNIL DE VENDAS
+    // ========================================================================
+    function renderKanbanBoard(records) {
+      const activeTenant = cachedTenants.find(t => t.id === selectedTenantId);
+      const pillEl = document.getElementById('kanban-tenant-pill');
+      if (pillEl) pillEl.textContent = activeTenant ? activeTenant.name : 'Todas Empresas';
+
+      const columns = {
+        IN_PROGRESS: document.getElementById('col-IN_PROGRESS'),
+        PENDING_PAYMENT: document.getElementById('col-PENDING_PAYMENT'),
+        COMPLETED: document.getElementById('col-COMPLETED'),
+        CANCELLED: document.getElementById('col-CANCELLED'),
+      };
+
+      const counts = { IN_PROGRESS: 0, PENDING_PAYMENT: 0, COMPLETED: 0, CANCELLED: 0 };
+
+      // Limpa colunas
+      Object.values(columns).forEach(col => { if (col) col.innerHTML = ''; });
+
+      records.forEach(r => {
+        let status = r.status || 'IN_PROGRESS';
+        if (!columns[status]) status = 'IN_PROGRESS';
+        counts[status] = (counts[status] || 0) + 1;
+
+        const card = document.createElement('div');
+        card.className = `kanban-card bg-slate-950 border ${r.activeAlerts?.length > 0 ? 'border-rose-700/80' : 'border-slate-800'} hover:border-slate-600 rounded-xl p-3.5 space-y-2 cursor-grab active:cursor-grabbing transition shadow-sm`;
+        card.setAttribute('draggable', 'true');
+        card.setAttribute('data-record-id', r.id);
+        card.ondragstart = (ev) => ev.dataTransfer.setData('text/plain', r.id);
+
+        const servico = r.formData?.queixa_principal || 'Massagem a Definir';
+        const horario = r.formData?.preferencia_horario || 'Horário a combinar';
+
+        card.innerHTML = `
+          <div class="flex items-start justify-between gap-1.5">
+            <div class="font-bold text-white text-xs truncate">${r.customer_name}</div>
+            <span class="text-[10px] text-slate-500 font-mono">${r.customer_phone.slice(-4)}</span>
+          </div>
+
+          <div class="text-[11px] text-slate-300">
+            <span class="text-emerald-400 font-semibold">💆‍♀️</span> ${servico}
+          </div>
+
+          <div class="text-[11px] text-sky-300 flex items-center gap-1 font-mono">
+            <span>🗓️</span> ${horario}
+          </div>
+
+          ${r.activeAlerts?.length > 0 ? `
+            <div class="flex flex-wrap gap-1 pt-1">
+              ${r.activeAlerts.map(a => `<span class="bg-rose-950/80 border border-rose-800 text-rose-300 text-[10px] px-1.5 py-0.5 rounded">${a}</span>`).join('')}
+            </div>
+          ` : ''}
+
+          <div class="pt-2 border-t border-slate-900 flex items-center justify-between text-[10px]">
+            <span class="text-slate-500">Mover para:</span>
+            <div class="flex gap-1">
+              ${status !== 'IN_PROGRESS' ? `<button onclick="updateRecordStage('${r.id}', 'IN_PROGRESS')" title="Em conversa" class="px-1.5 py-0.5 bg-sky-950 text-sky-400 border border-sky-800 rounded hover:bg-sky-900">💬</button>` : ''}
+              ${status !== 'PENDING_PAYMENT' ? `<button onclick="updateRecordStage('${r.id}', 'PENDING_PAYMENT')" title="Aguardando Pix" class="px-1.5 py-0.5 bg-amber-950 text-amber-400 border border-amber-800 rounded hover:bg-amber-900">💸</button>` : ''}
+              ${status !== 'COMPLETED' ? `<button onclick="updateRecordStage('${r.id}', 'COMPLETED')" title="Confirmado" class="px-1.5 py-0.5 bg-emerald-950 text-emerald-400 border border-emerald-800 rounded hover:bg-emerald-900">✅</button>` : ''}
+              ${status !== 'CANCELLED' ? `<button onclick="updateRecordStage('${r.id}', 'CANCELLED')" title="Cancelar" class="px-1.5 py-0.5 bg-rose-950 text-rose-400 border border-rose-800 rounded hover:bg-rose-900">✕</button>` : ''}
+            </div>
+          </div>
+        `;
+
+        if (columns[status]) columns[status].appendChild(card);
+      });
+
+      // Atualiza badges de contagem
+      Object.keys(counts).forEach(k => {
+        const b = document.getElementById(`badge-count-${k}`);
+        if (b) b.textContent = String(counts[k] || 0);
+        if (columns[k] && counts[k] === 0) {
+          columns[k].innerHTML = `<div class="text-slate-600 italic text-[11px] text-center py-8">Nenhum cliente nesta etapa</div>`;
+        }
+      });
+    }
+
+    function allowDrop(ev) {
+      ev.preventDefault();
+    }
+
+    async function handleDrop(ev, newStatus) {
+      ev.preventDefault();
+      const recordId = ev.dataTransfer.getData('text/plain');
+      if (recordId) {
+        await updateRecordStage(recordId, newStatus);
+      }
+    }
+
+    async function updateRecordStage(recordId, newStatus) {
+      try {
+        await fetch(`/api/v1/records/${recordId}/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: newStatus })
+        });
+        await loadAll();
+      } catch (err) {
+        console.error('Erro ao atualizar etapa no Kanban:', err);
+      }
+    }
+
+    // ========================================================================
+    // GESTÃO E CONSUMO DE TOKENS (IA)
+    // ========================================================================
+    async function loadTokensUsage() {
+      try {
+        const res = await fetch('/api/v1/tokens/usage').then(r => r.json());
+        const summary = res.summary || {};
+        const tenants = res.tenants || [];
+
+        document.getElementById('kpi-total-tokens-used').textContent = (summary.totalTokensUsed || 0).toLocaleString('pt-BR');
+        document.getElementById('kpi-total-tokens-limit').textContent = (summary.totalTokenLimit || 0).toLocaleString('pt-BR');
+        document.getElementById('kpi-total-tokens-percent').textContent = `${summary.percentageUsed || 0}%`;
+
+        const tbody = document.getElementById('tokens-table-tbody');
+        if (!tbody) return;
+
+        if (tenants.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="6" class="py-4 text-center text-slate-500 italic">Nenhuma empresa encontrada.</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = tenants.map(t => {
+          const isWarning = t.percentage_used >= 80;
+          const isDanger = t.percentage_used >= 100;
+          const barColor = isDanger ? 'bg-rose-500' : isWarning ? 'bg-amber-500' : 'bg-emerald-500';
+
+          return `
+            <tr class="hover:bg-slate-900/60 transition">
+              <td class="py-3 pr-3 font-semibold text-white">
+                <div>${t.name}</div>
+                <div class="text-[10px] text-slate-500 font-mono">${t.id}</div>
+              </td>
+              <td class="py-3 px-3">
+                <span class="inline-block px-2 py-0.5 rounded text-[10px] font-mono bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
+                  ${t.ai_provider} • ${t.ai_model}
+                </span>
+              </td>
+              <td class="py-3 px-3 font-mono font-bold text-amber-300">
+                ${t.tokens_used_month.toLocaleString('pt-BR')}
+              </td>
+              <td class="py-3 px-3 font-mono text-slate-300">
+                ${t.monthly_token_limit.toLocaleString('pt-BR')}
+              </td>
+              <td class="py-3 px-3">
+                <div class="flex items-center gap-2">
+                  <div class="flex-1 bg-slate-900 rounded-full h-2 overflow-hidden border border-slate-800">
+                    <div class="${barColor} h-2 rounded-full" style="width: ${Math.min(100, t.percentage_used)}%"></div>
+                  </div>
+                  <span class="text-[11px] font-mono font-bold ${isDanger ? 'text-rose-400' : isWarning ? 'text-amber-400' : 'text-slate-400'}">${t.percentage_used}%</span>
+                </div>
+              </td>
+              <td class="py-3 pl-3 text-right">
+                <button onclick="editTenantTokenLimit('${t.id}', '${t.name}', ${t.monthly_token_limit})" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-2.5 py-1 rounded border border-slate-700 transition">
+                  ⚙️ Limite
+                </button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      } catch (err) {
+        console.error('Erro ao carregar uso de tokens:', err);
+      }
+    }
+
+    async function editTenantTokenLimit(tenantId, name, currentLimit) {
+      const newLimit = prompt(`Definir novo Limite Mensal de Tokens para "${name}":`, currentLimit);
+      if (!newLimit || isNaN(Number(newLimit))) return;
+
+      await fetch(`/api/v1/tenants/${tenantId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ monthlyTokenLimit: Number(newLimit) })
+      });
+
+      alert(`✅ Limite de tokens da empresa "${name}" atualizado para ${Number(newLimit).toLocaleString('pt-BR')}!`);
+      loadTokensUsage();
+      loadAll();
+    }
+
+    switchTab('kanban');
     loadAll();
     loadBusinessReport();
+    loadTokensUsage();
     setInterval(loadAll, 5000);
     setInterval(loadBusinessReport, 8000);
+    setInterval(loadTokensUsage, 10000);
   </script>
 </body>
 </html>
