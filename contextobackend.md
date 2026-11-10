@@ -454,7 +454,19 @@
 - **Escopo Preparado:** Playbook de Refatoração Multi-Tenant para desacoplamento de regras hardcoded, tabela relacional `service_catalog`, generalização agnóstica do `gemini.service.ts` e injeção dinâmica de contexto com sliding window no `conversation.orchestrator.ts`.
 
 
-### Fase 26: Refatoração da Arquitetura Multi-Tenant & Catálogo Relacional (Concluída - 2026-11-09)
+### Fase 27: Controle Configurável de Intervenção Humana (Handoff) e Reconhecimento de Pós-Atendimento (Concluída - 2026-11-09)
+1. **Configuração de Human Handoff por Tenant (`human_handoff_config`):**
+   - Adicionada coluna `human_handoff_config TEXT DEFAULT '{}'` na tabela `tenants`.
+   - Suporte aos seguintes parâmetros ajustáveis:
+     - `enabled`: Habilita a proteção inteligente contra o bot atropelar conversas humanas.
+     - `humanResponseDelaySeconds`: Janela de espera (debounce de 45 segundos) antes do bot disparar resposta automática, permitindo que a profissional responda manualmente primeiro se estiver ativa no WhatsApp.
+     - `silenceAfterHumanReplyMinutes`: Se a profissional enviou qualquer mensagem no chat do cliente, o bot entra em silêncio absoluto naquele contato por 30 minutos (evitando atravessar diálogos fluidos).
+     - `silenceOnPersonalKeywordsHours`: Se o cliente ou a profissional enviarem termos como *"conversa pessoal"*, *"para o bot"*, *"chat pessoal"*, o robô é desarmado imediatamente naquele chat por 12 horas.
+2. **Reconhecimento Expandido de Finalização de Atendimento pela Profissional:**
+   - Adicionado suporte a variações de confirmação natural no chat "Você", como:
+     - `"Atendimento de Amor Gatosa foi concluído com sucesso"`
+     - `"Atendimento de [Nome] finalizado"`
+   - O sistema identifica o cliente no banco de dados mesmo com variações de escrita, cadastra a evolução em `session_evolutions`, atualiza `last_visit_at` em `customers`, agenda o follow-up da Ficha Viva e responde confirmando para a profissional no WhatsApp.
 Seguindo estritamente as diretrizes do Playbook Multi-Tenant fornecido pelo usuário:
 
 1. **Desacoplamento e Generalização do `GeminiService` ([gemini.service.ts](file:///c:/_dev/atendimento_whatsapp/src/hub/ai/gemini.service.ts)):**

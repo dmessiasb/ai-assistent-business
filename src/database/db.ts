@@ -46,6 +46,7 @@ function runSafeMigrations(): void {
     `ALTER TABLE appointments ADD COLUMN session_number INTEGER`,
     `ALTER TABLE tenants ADD COLUMN agenda_config TEXT DEFAULT '{}'`,
     `ALTER TABLE tenants ADD COLUMN whatsapp_hours_config TEXT DEFAULT '{}'`,
+    `ALTER TABLE tenants ADD COLUMN human_handoff_config TEXT DEFAULT '{}'`,
     `ALTER TABLE tenants ADD COLUMN ai_provider TEXT DEFAULT 'gemini'`,
     `ALTER TABLE tenants ADD COLUMN monthly_token_limit INTEGER DEFAULT 500000`,
     `ALTER TABLE tenants ADD COLUMN tokens_used_month INTEGER DEFAULT 0`,
@@ -305,10 +306,17 @@ function seedDefaultInstanceAndTenant(): void {
     },
   });
 
+  const defaultAdenHumanHandoffConfig = JSON.stringify({
+    enabled: true,
+    humanResponseDelaySeconds: 45, // Aguarda 45s antes do bot responder, dando prioridade para resposta humana imediata
+    silenceAfterHumanReplyMinutes: 30, // Se a profissional mandou mensagem, silencia o bot por 30 minutos naquele chat
+    silenceOnPersonalKeywordsHours: 12, // Se detectar "conversa pessoal", "para o bot", silencia por 12 horas
+  });
+
   db.prepare(`
     INSERT OR IGNORE INTO tenants (
-      id, name, vertical_preset_id, whatsapp_instance_id, owner_phone, ai_api_key, ai_model, security_mode, allowed_test_jids, services_catalog, skill_markdown, agenda_config, whatsapp_hours_config, branding_config, ai_provider, monthly_token_limit, tokens_used_month, personhood
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      id, name, vertical_preset_id, whatsapp_instance_id, owner_phone, ai_api_key, ai_model, security_mode, allowed_test_jids, services_catalog, skill_markdown, agenda_config, whatsapp_hours_config, human_handoff_config, branding_config, ai_provider, monthly_token_limit, tokens_used_month, personhood
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     'tenant_demo_estetica',
     'ADEN Massoterapia',
@@ -323,6 +331,7 @@ function seedDefaultInstanceAndTenant(): void {
     defaultAdenSkill,
     defaultAdenAgendaConfig,
     defaultAdenWhatsappHoursConfig,
+    defaultAdenHumanHandoffConfig,
     JSON.stringify({
       primaryColor: '#5F7358',
       headerText: 'ADEN Massoterapia — Ficha de Pré-Atendimento & Bem-Estar',
@@ -413,7 +422,8 @@ function seedDefaultInstanceAndTenant(): void {
         services_catalog = CASE WHEN services_catalog IS NULL OR services_catalog = '' OR services_catalog = '[]' THEN ? ELSE services_catalog END,
         ai_api_key = CASE WHEN ai_api_key IS NULL OR ai_api_key = '' THEN ? ELSE ai_api_key END,
         agenda_config = CASE WHEN agenda_config IS NULL OR agenda_config = '' OR agenda_config = '{}' THEN ? ELSE agenda_config END,
-        whatsapp_hours_config = CASE WHEN whatsapp_hours_config IS NULL OR whatsapp_hours_config = '' OR whatsapp_hours_config = '{}' THEN ? ELSE whatsapp_hours_config END
+        whatsapp_hours_config = CASE WHEN whatsapp_hours_config IS NULL OR whatsapp_hours_config = '' OR whatsapp_hours_config = '{}' THEN ? ELSE whatsapp_hours_config END,
+        human_handoff_config = CASE WHEN human_handoff_config IS NULL OR human_handoff_config = '' OR human_handoff_config = '{}' THEN ? ELSE human_handoff_config END
     WHERE id = 'tenant_demo_estetica'
   `).run(
     JSON.stringify(['237327075004656@lid', '149091233304709@lid', 'ricardo']),
@@ -421,6 +431,7 @@ function seedDefaultInstanceAndTenant(): void {
     defaultAdenServices,
     envGeminiKey,
     defaultAdenAgendaConfig,
-    defaultAdenWhatsappHoursConfig
+    defaultAdenWhatsappHoursConfig,
+    defaultAdenHumanHandoffConfig
   );
 }

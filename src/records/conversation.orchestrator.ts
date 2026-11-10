@@ -134,21 +134,41 @@ export class ConversationOrchestrator {
     }
 
     // ========================================================================
-    // 3. VALIDAÇÃO DE INTERVENÇÃO HUMANA ("meu cliente já respondendo o cliente dele")
-    // Se a profissional (Adenilde) enviou mensagem manual recente para este cliente, o robô NÃO deve intervir!
+    // 3. VALIDAÇÃO DE INTERVENÇÃO HUMANA & PAUSA DE CONVERSA PESSOAL
+    // Se a profissional enviou mensagem recente ou se o chat foi pausado, o robô NÃO deve intervir!
     // ========================================================================
+    const handoff = config.humanHandoffConfig || {
+      enabled: true,
+      humanResponseDelaySeconds: 45,
+      silenceAfterHumanReplyMinutes: 30,
+      silenceOnPersonalKeywordsHours: 12,
+    };
+
     const isActivelyResponding = isProfessionalActivelyResponding({
       tenantId: config.tenantId,
       instanceId: config.whatsappInstanceId,
       senderPhone: fromPhone,
       remoteJid: payload.data.remoteJid,
-      sinceMinutes: 20,
+      sinceMinutes: handoff.silenceAfterHumanReplyMinutes || 30,
     });
 
     if (isActivelyResponding) {
       console.log(
-        `🔇 [Intervenção Humana Ativa] A profissional está conversando com o cliente (${fromPhone}). Robô em silêncio absoluto.`
+        `🔇 [Intervenção Humana Ativa / Pausa Pessoal] A profissional está conversando com o cliente ou o chat foi pausado (${fromPhone}). Robô em silêncio absoluto.`
       );
+      return {
+        mode: 'IGNORED_CASUAL',
+        replyMessage: '',
+      };
+    }
+
+    // Se o cliente acabou de pedir pausa pessoal diretamente (ex: "conversa pessoal", "para o bot")
+    if (
+      /\b(conversa\s+pessoal|para\s+(?:um\s+pouco\s+)?(?:o\s+)?(?:teste|bot)|pausar\s+bot|conversa\s+particular|chat\s+pessoal)\b/i.test(
+        userText
+      )
+    ) {
+      console.log(`🔇 [Pausa Pessoal Solicitada] Cliente (${fromPhone}) pediu conversa pessoal. Silenciando o robô.`);
       return {
         mode: 'IGNORED_CASUAL',
         replyMessage: '',
@@ -210,6 +230,30 @@ export class ConversationOrchestrator {
     }
 
     // 5. Fluxo Contextual do Cliente: analisa o contexto antes de responder!
+    // Se humanResponseDelaySeconds estiver ativo (ex: 45s), aguarda esse intervalo antes de responder.
+    // Se durante o intervalo a profissional responder manualmente ou o chat for pausado, aborta a resposta automática!
+    if (handoff.enabled && handoff.humanResponseDelaySeconds > 0) {
+      const delayMs = Math.min(handoff.humanResponseDelaySeconds, 60) * 1000;
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+
+      // Checa novamente se o humano respondeu enquanto esperava
+      const respondedDuringWait = isProfessionalActivelyResponding({
+        tenantId: config.tenantId,
+        instanceId: config.whatsappInstanceId,
+        senderPhone: fromPhone,
+        remoteJid: payload.data.remoteJid,
+        sinceMinutes: handoff.silenceAfterHumanReplyMinutes || 30,
+      });
+
+      if (respondedDuringWait) {
+        console.log(`🔇 [Intervenção Humana Durante Espera] Humano respondeu durante o debounce de ${delayMs / 1000}s. Abortando bot.`);
+        return {
+          mode: 'IGNORED_CASUAL',
+          replyMessage: '',
+        };
+      }
+    }
+
     const cleanClientText = userText.replace(/^#teste\s*/i, '').trim() || 'Oi';
     const result = await this.handleClientInterview(
       config,
@@ -695,9 +739,12 @@ export class ConversationOrchestrator {
     }
 
     // 1. PRIMEIRO: Verifica se é um REGISTRO DE PÓS-ATENDIMENTO / EVOLUÇÃO DE SESSÃO
-    // Ex: "Quero registrar o atendimento que foi feito para Ricardo Messias Batista...", "Atendi o cliente...", "#atendi"
+    // Ex: "Atendimento de Amor Gatosa foi concluído com sucesso", "Quero registrar o atendimento...", "Atendi o cliente...", "#atendi"
     const isExplicitAttendanceReport =
       /^#atendi\b/i.test(cleanText) ||
+      /\b(atendimento\s+(?:d[eaio]\s+)?([A-ZÀ-Úa-zà-ú\s]+)\s+(?:foi\s+)?(?:conclu[ií]do|finalizado|realizado|terminado|com\s+sucesso))\b/i.test(
+        cleanText
+      ) ||
       /\b(quero\s+registrar|registrar\s+(?:o\s+|um\s+)?(?:atendimento|evolu[cç][aã]o|sess[aã]o)|atendimento\s+(?:que\s+foi\s+)?(?:feito|realizado)|atendi\s+(?:o|a|paciente|cliente)|realizei\s+(?:o\s+|a\s+)?(?:atendimento|sess[aã]o|massagem)|finalizei\s+(?:o\s+|a\s+)?(?:atendimento|sess[aã]o)|fiz\s+(?:a\s+|o\s+)?(?:massagem|drenagem|sess[aã]o|procedimento|atendimento)|p[oó]s[- ]?atendimento\s+d[oa])\b/i.test(
         lower
       );
@@ -860,9 +907,11 @@ export class ConversationOrchestrator {
         )
         .all(config.tenantId) as Array<{ id: string; full_name: string; phone_number: string }>;
 
-      customer = allCustomers.find((c) =>
-        lower.includes(c.full_name.toLowerCase().split(' ')[0])
-      );
+      customer = allCustomers.find((c) => {
+        const parts = c.full_name.toLowerCase().split(' ');
+        // Dá match se o primeiro nome estiver na fala ou se qualquer palavra de 3+ letras estiver contida
+        return parts.some((p) => p.length >= 3 && lower.includes(p));
+      });
 
       if (customer && spokenFullName && spokenFullName.length > customer.full_name.length) {
         db.prepare(`UPDATE customers SET full_name = ? WHERE id = ?`).run(

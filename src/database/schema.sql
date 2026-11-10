@@ -79,6 +79,7 @@ CREATE TABLE IF NOT EXISTS tenants (
     skill_markdown TEXT DEFAULT '', -- Skill e Guardrails de Segurança exclusivos da empresa
     agenda_config TEXT DEFAULT '{}', -- JSON: dias de atendimento, horários de abertura/fechamento, almoço e buffer entre atendimentos
     whatsapp_hours_config TEXT DEFAULT '{}', -- JSON: horário de atendimento do WhatsApp e fila noturna
+    human_handoff_config TEXT DEFAULT '{}', -- JSON: atraso de resposta do bot, silêncio após resposta humana e pausa por conversa pessoal
     ai_provider TEXT DEFAULT 'gemini', -- Provedor de IA: gemini | openai | anthropic
     monthly_token_limit INTEGER DEFAULT 500000, -- Limite mensal de tokens do tenant
     tokens_used_month INTEGER DEFAULT 0, -- Tokens consumidos no mês vigente

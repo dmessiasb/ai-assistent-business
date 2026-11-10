@@ -79,6 +79,13 @@ export interface WhatsAppHoursConfig {
   >;
 }
 
+export interface HumanHandoffConfig {
+  enabled: boolean;
+  humanResponseDelaySeconds: number; // Ex: 45s de espera antes do bot responder, dando chance para intervenção humana
+  silenceAfterHumanReplyMinutes: number; // Ex: 30 min em silêncio caso o humano tenha falado no chat
+  silenceOnPersonalKeywordsHours: number; // Ex: 12 horas em silêncio se detectar "conversa pessoal"
+}
+
 export interface EffectiveTenantConfig {
   tenantId: string;
   tenantName: string;
@@ -100,6 +107,7 @@ export interface EffectiveTenantConfig {
   skillMarkdown: string;
   agendaConfig: AgendaConfig;
   whatsappHoursConfig: WhatsAppHoursConfig;
+  humanHandoffConfig: HumanHandoffConfig;
   presetId: string;
   presetName: string;
   terminology: {
@@ -297,8 +305,33 @@ export function isProfessionalActivelyResponding(params: {
   remoteJid: string;
   sinceMinutes?: number;
 }): boolean {
-  const sinceMin = params.sinceMinutes || 20;
+  const sinceMin = params.sinceMinutes || 30;
   const cleanPhone = params.senderPhone.replace(/\D/g, '');
+
+  // 0. Verifica se o chat está explicitamente pausado por palavras-chave (ex: "conversa pessoal", "para o bot")
+  const recentPause = db
+    .prepare(
+      `SELECT created_at, raw_content
+       FROM hub_message_logs
+       WHERE (remote_jid = ? OR sender_phone = ?)
+         AND direction = 'INBOUND'
+         AND (
+           raw_content LIKE '%conversa pessoal%' OR
+           raw_content LIKE '%para um pouco o teste%' OR
+           raw_content LIKE '%para o bot%' OR
+           raw_content LIKE '%pausar bot%' OR
+           raw_content LIKE '%conversa particular%' OR
+           raw_content LIKE '%chat pessoal%'
+         )
+         AND created_at >= datetime('now', '-12 hours')
+       ORDER BY created_at DESC
+       LIMIT 1`
+    )
+    .get(params.remoteJid, cleanPhone) as { created_at: string; raw_content: string } | undefined;
+
+  if (recentPause) {
+    return true;
+  }
 
   // 1. Houve mensagem OUTBOUND manual enviada pela profissional/dono nos últimos sinceMin minutos?
   const recentManual = db
@@ -365,6 +398,7 @@ export class DynamicSchemaEngine {
           t.skill_markdown,
           t.agenda_config,
           t.whatsapp_hours_config,
+          t.human_handoff_config,
           t.ai_provider,
           t.monthly_token_limit,
           t.tokens_used_month,
@@ -500,6 +534,18 @@ export class DynamicSchemaEngine {
       }
     } catch {}
 
+    let humanHandoffConfig: HumanHandoffConfig = {
+      enabled: true,
+      humanResponseDelaySeconds: 45,
+      silenceAfterHumanReplyMinutes: 30,
+      silenceOnPersonalKeywordsHours: 12,
+    };
+    try {
+      if ((row as any).human_handoff_config) {
+        humanHandoffConfig = { ...humanHandoffConfig, ...JSON.parse((row as any).human_handoff_config) };
+      }
+    } catch {}
+
     return {
       tenantId: row.tenant_id,
       tenantName: row.tenant_name,
@@ -521,6 +567,7 @@ export class DynamicSchemaEngine {
       skillMarkdown: row.skill_markdown || '',
       agendaConfig,
       whatsappHoursConfig,
+      humanHandoffConfig,
       presetId: row.preset_id,
       presetName: row.preset_name,
       terminology: JSON.parse(row.terminology),
