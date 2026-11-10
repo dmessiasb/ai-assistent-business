@@ -452,3 +452,48 @@
 - **Branch Criada:** `refactor/multi-tenant-architecture`.
 - **Origem Sincronizada:** Enviada e vinculada ao repositório remoto GitHub (`origin/refactor/multi-tenant-architecture`).
 - **Escopo Preparado:** Playbook de Refatoração Multi-Tenant para desacoplamento de regras hardcoded, tabela relacional `service_catalog`, generalização agnóstica do `gemini.service.ts` e injeção dinâmica de contexto com sliding window no `conversation.orchestrator.ts`.
+
+
+### Fase 26: Refatoração da Arquitetura Multi-Tenant & Catálogo Relacional (Concluída - 2026-11-09)
+Seguindo estritamente as diretrizes do Playbook Multi-Tenant fornecido pelo usuário:
+
+1. **Desacoplamento e Generalização do `GeminiService` ([gemini.service.ts](file:///c:/_dev/atendimento_whatsapp/src/hub/ai/gemini.service.ts)):**
+   - Eliminados todos os hardcodes e textos fixos sobre Adenilde, valores pré-fixados de R$ 36 de sinal, sanitização de "Adenzinha" e regras embutidas no código da classe.
+   - A classe passou a ser um executor agnóstico puro que aceita `GeminiProcessInput`:
+     - `systemInstruction`: String com o prompt compilado dinamicamente pelo orquestrador.
+     - `recentHistory`: Array com o histórico de mensagens `{ role: 'user' | 'model', text: string }`.
+     - `tools`: Declaração de ferramentas para Function Calling do Gemini.
+     - `mediaBase64` / `mimeType`: Suporte a áudio e imagens.
+     - `apiKeyOverride` / `modelOverride`: Suporte a modelos e chaves exclusivas de cada tenant.
+   - Retorno estruturado via `GeminiProcessResult`:
+     - `conversationalReply`: Resposta conversacional limpa gerada pela IA.
+     - `functionCalls`: Chamadas de ferramentas disparadas pelo Gemini (`name`, `args`).
+     - `tokensUsed`: Contabilização oficial do consumo de tokens capturado de `usageMetadata.totalTokenCount`.
+
+2. **Evolução do Banco de Dados ([schema.sql](file:///c:/_dev/atendimento_whatsapp/src/database/schema.sql) & [db.ts](file:///c:/_dev/atendimento_whatsapp/src/database/db.ts)):**
+   - **Tabela `tenants`:** Adicionadas colunas `ai_provider TEXT DEFAULT 'gemini'`, `monthly_token_limit INTEGER DEFAULT 500000`, `tokens_used_month INTEGER DEFAULT 0` e `personhood TEXT DEFAULT 'FIRST_PERSON_SINGULAR'`.
+   - **Tabela `service_catalog`:** Criada tabela relacional para catálogo de procedimentos:
+     - `id`, `tenant_id` (FK cascade), `name`, `description`, `duration_min`, `price_single`, `price_package_4x`, `recommended_deposit`, `is_active`, `created_at`, `updated_at`.
+     - Índice `idx_services_tenant` criado sobre `(tenant_id, is_active)`.
+   - **Tabela `customers`:** Adicionada coluna `shadow_memory TEXT DEFAULT ''` para retenção contínua de memória e queixas do cliente sem depender de varredura completa de histórico.
+   - **Migrações e Seeds Seguras:**
+     - Adicionada migração idempotente em `runSafeMigrations()`.
+     - Inicializado e persistido o catálogo oficial da ADEN Massoterapia (5 serviços com valores, durações e sinais recomendados calculados).
+
+3. **Orquestrador de Conversa e Montagem Dinâmica de Contexto ([conversation.orchestrator.ts](file:///c:/_dev/atendimento_whatsapp/src/records/conversation.orchestrator.ts)):**
+   - Implementada a função `buildDynamicSystemPrompt(tenant, services, customer, agendaStatusSummary)`:
+     - Formata procedimentos lidos diretamente da tabela relacional `service_catalog`.
+     - Injeta dinamicamente a persona (`personhood`: 1ª pessoa do singular vs 1ª pessoa do plural).
+     - Insere endereço, horários de atendimento da maca e as regras éticas e de vestimenta configuradas na `skill_markdown`.
+   - **Sliding Window de 8 Mensagens:** Histórico truncado nas últimas 8 mensagens no formato `{ role: 'user' | 'model', text: string }`, otimizando a janela de contexto e o consumo de tokens.
+   - **Controle de Cotas de Tokens:** Implementado `incrementTenantTokensUsed(tenantId, tokens)` que soma os tokens consumidos do Gemini diretamente em `tenants.tokens_used_month`.
+   - **Declaração e Execução de Tools (Function Calling):**
+     - `salvar_anamnese_concluida`: Atualiza `dynamic_records` e grava na memória persistente `customers.shadow_memory`.
+     - `confirmar_agendamento`: Registra e reserva o slot na agenda via `schemaEngine.saveAppointmentSlot` com validação de buffer e horário.
+   - Sem ferramentas de leitura (evita round-trips e latência), mantendo a resposta ágil, calorosa e em poucas frases curtas.
+
+4. **Validação & Testes ([scratch/test_multi_tenant_refactor.ts](file:///c:/_dev/atendimento_whatsapp/scratch/test_multi_tenant_refactor.ts)):**
+   - Verificada a criação de todas as novas tabelas e colunas no SQLite.
+   - Validada a injeção do catálogo relacional no prompt dinâmico.
+   - Testado o pipeline agnóstico do Gemini sem referências fixas no código-fonte.
+   - Servidor reiniciado com sucesso em segundo plano na porta 3000.

@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import { db } from '../database/db.ts';
+import { geminiService } from '../hub/ai/gemini.service.ts';
 import { type HubEventPayload, webhookDispatcher } from '../hub/webhooks/webhook.dispatcher.ts';
 import { whatsappManager } from '../hub/whatsapp/baileys.manager.ts';
 import {
@@ -988,16 +989,16 @@ export class ConversationOrchestrator {
     const customer = db
       .prepare(`SELECT * FROM customers WHERE tenant_id = ? AND phone_number = ?`)
       .get(config.tenantId, clientPhone) as
-      | { id: string; full_name: string; active_alerts: string }
+      | { id: string; full_name: string; active_alerts: string; shadow_memory?: string }
       | undefined;
 
     let activeCustomer = customer;
     if (!activeCustomer) {
       const newCustomerId = `cust_${crypto.randomUUID().slice(0, 8)}`;
       db.prepare(
-        `INSERT INTO customers (id, tenant_id, phone_number, full_name, last_visit_at) VALUES (?, ?, ?, ?, datetime('now'))`
+        `INSERT INTO customers (id, tenant_id, phone_number, full_name, shadow_memory, last_visit_at) VALUES (?, ?, ?, ?, '', datetime('now'))`
       ).run(newCustomerId, config.tenantId, clientPhone, pushName);
-      activeCustomer = { id: newCustomerId, full_name: pushName, active_alerts: '[]' };
+      activeCustomer = { id: newCustomerId, full_name: pushName, active_alerts: '[]', shadow_memory: '' };
     }
 
     // Carrega o estado estruturado da agenda e pacotes salvos no banco de dados (SEM AMNÉSIA)
@@ -1031,14 +1032,20 @@ export class ConversationOrchestrator {
 
     const recentLogs = db
       .prepare(
-        `SELECT direction, COALESCE(ai_transcription, raw_content) AS content FROM hub_message_logs WHERE sender_phone = ? ORDER BY created_at DESC LIMIT 6`
+        `SELECT direction, COALESCE(ai_transcription, raw_content) AS content FROM hub_message_logs WHERE sender_phone = ? ORDER BY created_at DESC LIMIT 8`
       )
       .all(clientPhone) as Array<{ direction: string; content: string }>;
 
-    const recentHistoryText = recentLogs
+    const recentHistoryArray: Array<{ role: 'user' | 'model'; text: string }> = recentLogs
       .slice()
       .reverse()
-      .map((l) => `${l.direction === 'INBOUND' ? 'Cliente' : 'Atendente'}: ${l.content}`)
+      .map((l) => ({
+        role: l.direction === 'INBOUND' ? ('user' as const) : ('model' as const),
+        text: l.content || '',
+      }));
+
+    const recentHistoryText = recentHistoryArray
+      .map((l) => `${l.role === 'user' ? 'Cliente' : 'Atendente'}: ${l.text}`)
       .join('\n');
 
     const intent = schemaEngine.classifyConversationIntent({
@@ -1276,6 +1283,75 @@ export class ConversationOrchestrator {
           : undefined,
       activeAppointmentsSummary: agendaContext.summaryText,
     };
+
+    // Obtenção dos serviços relacionais do tenant
+    const relationalServices = this.getTenantRelationalServices(config.tenantId);
+
+    // Constrói prompt de sistema dinâmico sem acoplamentos rígidos
+    const dynamicSystemInstruction = this.buildDynamicSystemPrompt(
+      config,
+      relationalServices,
+      {
+        phone_number: clientPhone,
+        full_name: activeCustomer.full_name,
+        shadow_memory: (activeCustomer as any).shadow_memory,
+      },
+      agendaContext.summaryText
+    );
+
+    // Chamada agnóstica ao Gemini com Tools e Sliding Window de 8 mensagens
+    let aiResponseText = '';
+    if (config.aiApiKey || geminiService.isConfigured()) {
+      try {
+        const geminiResult = await geminiService.processInputAndExtractJson({
+          systemInstruction: dynamicSystemInstruction,
+          text: userText,
+          recentHistory: recentHistoryArray,
+          tools: this.getFunctionDeclarations(),
+          apiKeyOverride: config.aiApiKey,
+          modelOverride: config.aiModel,
+        });
+
+        if (geminiResult.tokensUsed > 0) {
+          this.incrementTenantTokensUsed(config.tenantId, geminiResult.tokensUsed);
+        }
+
+        if (geminiResult.conversationalReply) {
+          aiResponseText = geminiResult.conversationalReply;
+        }
+
+        // Executa ferramentas disparadas pela IA
+        if (geminiResult.functionCalls && geminiResult.functionCalls.length > 0) {
+          for (const fc of geminiResult.functionCalls) {
+            if (fc.name === 'salvar_anamnese_concluida') {
+              const q = fc.args.queixa_principal;
+              const a = fc.args.alergias;
+              const c = fc.args.condicoes_medicas;
+              if (q) updatedFormData.queixa_principal = q;
+              if (a) updatedFormData.alergias_restricoes = a;
+              if (c) updatedFormData.condicoes_especiais = c;
+
+              const memoryPiece = `Queixa: ${q || 'N/D'}. Alergias: ${a || 'Nenhuma'}. Restrições: ${c || 'Nenhuma'}.`;
+              db.prepare(`UPDATE customers SET shadow_memory = ? WHERE id = ?`).run(
+                memoryPiece,
+                activeCustomer.id
+              );
+            } else if (fc.name === 'confirmar_agendamento') {
+              const srv = fc.args.servico_nome || 'Massagem Relaxante';
+              const dt = fc.args.data_hora_texto || '';
+              if (dt) {
+                updatedFormData.preferencia_horario = dt;
+              }
+              if (srv) {
+                updatedFormData.queixa_principal = srv;
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('[ConversationOrchestrator] Falha no Gemini agnóstico, seguindo com fluxo de regras:', err);
+      }
+    }
 
     const extractionOutcome = await schemaEngine.extractFieldsFromInput({
       config,
@@ -1528,8 +1604,9 @@ export class ConversationOrchestrator {
         activeAlerts,
         formData: updatedFormData,
         replyMessage: this.sanitizeNaturalReply(
-          extractionOutcome.conversationalReply ||
-            `Aqui na *ADEN Massoterapia* eu atendo com hora marcada, em ambiente individual e acolhedor, trabalhando exclusivamente com as técnicas terapêuticas do meu catálogo (Massagem Relaxante, Drenagem Linfática, Pedras Quentes, Thai Massage e Massagem Localizada). Ficou alguma dúvida específica sobre o seu atendimento? 😊`,
+          aiResponseText ||
+            extractionOutcome.conversationalReply ||
+            `Aqui no *${config.tenantName}* eu atendo com hora marcada, em ambiente individual e acolhedor, trabalhando exclusivamente com as técnicas terapêuticas do meu catálogo. Ficou alguma dúvida específica sobre o seu atendimento? 😊`,
           clientPhone,
           firstName
         ),
@@ -1615,7 +1692,7 @@ export class ConversationOrchestrator {
         activeAlerts,
         formData: updatedFormData,
         replyMessage: this.sanitizeNaturalReply(
-          extractionOutcome.conversationalReply || `${greetingPrefix}${nextField.questionPrompt}`,
+          aiResponseText || extractionOutcome.conversationalReply || `${greetingPrefix}${nextField.questionPrompt}`,
           clientPhone,
           firstName
         ),
@@ -1673,7 +1750,7 @@ export class ConversationOrchestrator {
   /**
    * Sanitiza a resposta para garantir estrita fidelidade às regras de tom de voz:
    * 1. Elimina vocativos íntimos/carinhosos ("meu bem", "amor", etc.).
-   * 2. Converte expressões no plural para 1ª pessoa do singular (atendimento individual da Adenilde).
+   * 2. Converte expressões no plural para 1ª pessoa do singular quando configurado assim.
    * 3. Proíbe expressamente "a seu critério" em vestimenta/nudez.
    * 4. Remove repetições desnecessárias do nome do cliente em mensagens consecutivas.
    */
@@ -1742,6 +1819,197 @@ export class ConversationOrchestrator {
     }
 
     return text;
+  }
+
+  /**
+   * Constrói o Prompt Dinâmico de Sistema conforme o Playbook Multi-Tenant:
+   * Sem hardcodes de pessoa ou empresa, lendo serviços da tabela relacional e
+   * respeitando as regras éticas, persona e histórico prévio.
+   */
+  public buildDynamicSystemPrompt(
+    tenant: EffectiveTenantConfig,
+    services: Array<{
+      id: string;
+      name: string;
+      description?: string | null;
+      duration_min: number;
+      price_single: number;
+      price_package_4x?: number | null;
+      recommended_deposit?: number | null;
+    }>,
+    customer: { phone_number: string; full_name: string; shadow_memory?: string },
+    agendaStatusSummary?: string
+  ): string {
+    const catalogText = services
+      .map(
+        (s) =>
+          `- ${s.name} (${s.duration_min} min): R$ ${s.price_single.toFixed(2)} avulsa${
+            s.price_package_4x ? ` | Pacote 4x: R$ ${s.price_package_4x.toFixed(2)}` : ''
+          } (Sinal recomendado 30%: R$ ${(s.recommended_deposit || s.price_single * 0.3).toFixed(2)})${
+            s.description ? ` - ${s.description}` : ''
+          }`
+      )
+      .join('\n');
+
+    const address = tenant.brandingAddress || tenant.tenantName;
+    const hours =
+      tenant.agendaConfig.openTime && tenant.agendaConfig.closeTime
+        ? `Segunda a Sábado, das ${tenant.agendaConfig.openTime} às ${tenant.agendaConfig.closeTime}`
+        : 'Segunda a Sábado, das 08:30 às 19:30';
+
+    return `
+Você é a própria responsável pelo atendimento no WhatsApp do estabelecimento "${tenant.tenantName}".
+Atue com calor humano, empatia, acolhimento profissional e brevidade real de WhatsApp (parágrafos curtos, de 1 a 3 frases no máximo).
+
+PERSONA & COMUNICAÇÃO:
+- Fale SEMPRE em ${
+      tenant.personhood === 'FIRST_PERSON_SINGULAR'
+        ? '1ª pessoa do singular ("eu atendo", "meu espaço", "minha maca", "posso agendar para você")'
+        : '1ª pessoa do plural ("nós atendemos", "nossa equipe", "nosso espaço")'
+    }.
+- Endereço / Local: ${address}.
+- Horários de atendimento: ${hours}.
+- Chame o cliente pelo primeiro nome no máximo 1 vez no início. Não repita o nome a cada resposta.
+${agendaStatusSummary ? `- Agendamentos/Pacotes atuais do cliente no sistema: ${agendaStatusSummary} (NUNCA diga que não achou no sistema!)` : ''}
+
+CATÁLOGO OFICIAL DE SERVIÇOS E PREÇOS:
+${catalogText}
+
+DIRETRIZES DA CONVERSA (ORIENTADA A OBJETIVOS, NÃO A FORMULÁRIOS):
+1. Acolha com atenção, entenda a queixa ou interesse do cliente e recomende o procedimento mais adequado com seu valor.
+2. ANAMNESE INVISÍVEL: Descubra com sensibilidade o que o cliente sente (região da dor, se há alergia a óleos/cremes e restrições de saúde, cirurgias ou gestação). NUNCA mencione termos como "ficha", "anamnese" ou "questionário".
+3. Quando tiver a queixa principal, alergias e restrições de saúde informadas, acione a ferramenta "salvar_anamnese_concluida".
+4. Combine o dia e horário preferido. Quando acordado, acione a ferramenta "confirmar_agendamento".
+5. SINAL PIX: Solicite o sinal recomendado de 30% para garantir a vaga na maca. Se o cliente pedir flexibilidade (ex: pagar R$ 20 ou R$ 30), aceite com cordialidade para evitar atrito. NUNCA confirme recebimento do Pix por conta própria: diga que você mesma confere o comprovante na conta bancária.
+
+REGRAS ÉTICAS E DE SEGURANÇA:
+- Vestimenta obrigatória: homens de bermuda leve; mulheres de calcinha e sutiã. Nudez é terminantemente proibida.
+- Recuse imediatamente e com firmeza respeitosa qualquer insinuação sexual ("final feliz", etc.), reforçando que o atendimento é estritamente terapêutico e profissional.
+${tenant.skillMarkdown || ''}
+
+CLIENTE ATUAL:
+- Nome: ${customer.full_name}
+- Telefone: ${customer.phone_number}
+- Histórico prévio / Memória: ${customer.shadow_memory || 'Primeiro contato'}
+`.trim();
+  }
+
+  /**
+   * Obtém a lista de serviços do catálogo relacional do tenant
+   */
+  public getTenantRelationalServices(tenantId: string) {
+    try {
+      const rows = db
+        .prepare(
+          `SELECT id, name, description, duration_min, price_single, price_package_4x, recommended_deposit 
+           FROM service_catalog WHERE tenant_id = ? AND is_active = 1`
+        )
+        .all(tenantId) as Array<{
+          id: string;
+          name: string;
+          description?: string | null;
+          duration_min: number;
+          price_single: number;
+          price_package_4x?: number | null;
+          recommended_deposit?: number | null;
+        }>;
+
+      if (rows && rows.length > 0) return rows;
+    } catch {}
+
+    return [
+      {
+        id: 'srv_relaxante',
+        name: 'Massagem Relaxante',
+        description: 'Massagem suave e terapêutica para alívio de estresse',
+        duration_min: 60,
+        price_single: 120.0,
+        price_package_4x: 420.0,
+        recommended_deposit: 36.0,
+      },
+      {
+        id: 'srv_drenagem',
+        name: 'Drenagem Linfática',
+        description: 'Redução de retenção de líquidos e inchaço',
+        duration_min: 50,
+        price_single: 80.0,
+        price_package_4x: 280.0,
+        recommended_deposit: 24.0,
+      },
+    ];
+  }
+
+  /**
+   * Declaração de ferramentas para Function Calling do Gemini
+   */
+  public getFunctionDeclarations() {
+    return [
+      {
+        functionDeclarations: [
+          {
+            name: 'salvar_anamnese_concluida',
+            description:
+              'Registra a conclusão da anamnese invisível quando queixa principal, alergias ou restrições de saúde foram levantadas.',
+            parameters: {
+              type: 'OBJECT',
+              properties: {
+                queixa_principal: {
+                  type: 'STRING',
+                  description: 'Queixa principal relatada pelo cliente ou procedimento acordado.',
+                },
+                alergias: {
+                  type: 'STRING',
+                  description: 'Alergias a óleos, cremes ou produtos relatadas (ou "Nenhuma declarada").',
+                },
+                condicoes_medicas: {
+                  type: 'STRING',
+                  description: 'Restrições de saúde, cirurgias recentes, dor aguda ou gestação (ou "Nenhuma").',
+                },
+              },
+              required: ['queixa_principal'],
+            },
+          },
+          {
+            name: 'confirmar_agendamento',
+            description:
+              'Registra o agendamento de data e horário acordados com o cliente para a sessão.',
+            parameters: {
+              type: 'OBJECT',
+              properties: {
+                servico_nome: {
+                  type: 'STRING',
+                  description: 'Nome do procedimento ou massagem acordada.',
+                },
+                data_hora_texto: {
+                  type: 'STRING',
+                  description: 'Data e horário acordado (ex: "Quarta-feira às 10:30").',
+                },
+                valor_acordado: {
+                  type: 'NUMBER',
+                  description: 'Valor acordado para o procedimento ou sessão.',
+                },
+              },
+              required: ['servico_nome', 'data_hora_texto'],
+            },
+          },
+        ],
+      },
+    ];
+  }
+
+  /**
+   * Atualiza a contagem de tokens consumidos pelo tenant no mês
+   */
+  public incrementTenantTokensUsed(tenantId: string, tokens: number): void {
+    if (tokens <= 0) return;
+    try {
+      db.prepare(`UPDATE tenants SET tokens_used_month = COALESCE(tokens_used_month, 0) + ? WHERE id = ?`).run(
+        tokens,
+        tenantId
+      );
+    } catch (err) {
+      console.error('[ConversationOrchestrator] Erro ao incrementar tokens do tenant:', err);
+    }
   }
 }
 

@@ -79,12 +79,36 @@ CREATE TABLE IF NOT EXISTS tenants (
     skill_markdown TEXT DEFAULT '', -- Skill e Guardrails de Segurança exclusivos da empresa
     agenda_config TEXT DEFAULT '{}', -- JSON: dias de atendimento, horários de abertura/fechamento, almoço e buffer entre atendimentos
     whatsapp_hours_config TEXT DEFAULT '{}', -- JSON: horário de atendimento do WhatsApp e fila noturna
+    ai_provider TEXT DEFAULT 'gemini', -- Provedor de IA: gemini | openai | anthropic
+    monthly_token_limit INTEGER DEFAULT 500000, -- Limite mensal de tokens do tenant
+    tokens_used_month INTEGER DEFAULT 0, -- Tokens consumidos no mês vigente
+    personhood TEXT DEFAULT 'FIRST_PERSON_SINGULAR', -- FIRST_PERSON_SINGULAR | FIRST_PERSON_PLURAL
     custom_schema_overrides TEXT DEFAULT '[]', -- JSON com perguntas extras específicas da clínica
-    branding_config TEXT DEFAULT '{}', -- JSON: logoUrl, primaryColor, headerText, footerText
+    branding_config TEXT DEFAULT '{}', -- JSON: logoUrl, primaryColor, headerText, footerText, address
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     FOREIGN KEY (vertical_preset_id) REFERENCES vertical_presets(id),
     FOREIGN KEY (whatsapp_instance_id) REFERENCES whatsapp_instances(id) ON DELETE SET NULL
 );
+
+-- ============================================================================
+-- CATÁLOGO DE SERVIÇOS & PROCEDIMENTOS RELACIONAL (Multi-Tenant)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS service_catalog (
+    id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    description TEXT,
+    duration_min INTEGER NOT NULL,
+    price_single REAL NOT NULL,
+    price_package_4x REAL,
+    recommended_deposit REAL,
+    is_active INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_services_tenant ON service_catalog(tenant_id, is_active);
 
 CREATE TABLE IF NOT EXISTS customers (
     id TEXT PRIMARY KEY,
@@ -93,6 +117,7 @@ CREATE TABLE IF NOT EXISTS customers (
     full_name TEXT NOT NULL,
     birth_date TEXT,
     active_alerts TEXT NOT NULL DEFAULT '[]', -- JSON Array: ["🚨 Alergia: Cânfora", "⚠️ Gestante"]
+    shadow_memory TEXT DEFAULT '', -- Memória de longo prazo persistida pelas tools
     last_visit_at TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     UNIQUE(tenant_id, phone_number),

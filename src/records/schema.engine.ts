@@ -86,6 +86,11 @@ export interface EffectiveTenantConfig {
   ownerPhone: string;
   aiApiKey: string;
   aiModel: string;
+  aiProvider: string;
+  monthlyTokenLimit: number;
+  tokensUsedMonth: number;
+  personhood: 'FIRST_PERSON_SINGULAR' | 'FIRST_PERSON_PLURAL';
+  brandingAddress?: string;
   securityMode: 'TEST_WHITELIST' | 'PRODUCTION_ALL';
   allowedTestJids: string[];
   requireDownPayment: boolean;
@@ -360,6 +365,11 @@ export class DynamicSchemaEngine {
           t.skill_markdown,
           t.agenda_config,
           t.whatsapp_hours_config,
+          t.ai_provider,
+          t.monthly_token_limit,
+          t.tokens_used_month,
+          t.personhood,
+          t.branding_config,
           t.custom_schema_overrides,
           vp.id AS preset_id,
           vp.name AS preset_name,
@@ -382,6 +392,11 @@ export class DynamicSchemaEngine {
           owner_phone: string;
           ai_api_key: string | null;
           ai_model: string | null;
+          ai_provider: string | null;
+          monthly_token_limit: number | null;
+          tokens_used_month: number | null;
+          personhood: 'FIRST_PERSON_SINGULAR' | 'FIRST_PERSON_PLURAL' | null;
+          branding_config: string | null;
           security_mode: 'TEST_WHITELIST' | 'PRODUCTION_ALL' | null;
           allowed_test_jids: string | null;
           require_down_payment: number | null;
@@ -406,15 +421,47 @@ export class DynamicSchemaEngine {
 
     const baseSchema = JSON.parse(row.form_schema || '[]') as FormFieldSchema[];
     const customSchema = JSON.parse(row.custom_schema_overrides || '[]') as FormFieldSchema[];
+
+    // Busca serviços diretamente da tabela relacional service_catalog
     let parsedCatalog: TenantServiceItem[] = [];
     try {
-      parsedCatalog = JSON.parse(row.services_catalog || '[]');
+      const dbServices = db
+        .prepare(
+          `SELECT id, name, duration_min AS durationMinutes, price_single AS priceSingle, price_package_4x AS pricePackage4 
+           FROM service_catalog WHERE tenant_id = ? AND is_active = 1`
+        )
+        .all(row.tenant_id) as Array<{
+          id: string;
+          name: string;
+          durationMinutes: number;
+          priceSingle: number;
+          pricePackage4: number | null;
+        }>;
+
+      if (dbServices.length > 0) {
+        parsedCatalog = dbServices;
+      } else {
+        parsedCatalog = JSON.parse(row.services_catalog || '[]');
+      }
     } catch {
-      parsedCatalog = [];
+      try {
+        parsedCatalog = JSON.parse(row.services_catalog || '[]');
+      } catch {
+        parsedCatalog = [];
+      }
     }
+
     if (!Array.isArray(parsedCatalog) || parsedCatalog.length === 0) {
       parsedCatalog = DEFAULT_ADEN_SERVICES;
     }
+
+    let parsedBrandingAddress = '';
+    try {
+      if (row.branding_config) {
+        const b = JSON.parse(row.branding_config);
+        parsedBrandingAddress = b.address || '';
+      }
+    } catch {}
 
     let agendaConfig: AgendaConfig = {
       businessDays: [1, 2, 3, 4, 5, 6],
@@ -459,7 +506,12 @@ export class DynamicSchemaEngine {
       whatsappInstanceId: row.whatsapp_instance_id,
       ownerPhone: row.owner_phone.replace(/\D/g, ''),
       aiApiKey: (row.ai_api_key || process.env.GEMINI_API_KEY || '').trim(),
-      aiModel: (row.ai_model || process.env.GEMINI_MODEL || 'gemini-3.8-flash').trim(),
+      aiModel: (row.ai_model || process.env.GEMINI_MODEL || 'gemini-2.5-flash').trim(),
+      aiProvider: row.ai_provider || 'gemini',
+      monthlyTokenLimit: Number(row.monthly_token_limit) || 500000,
+      tokensUsedMonth: Number(row.tokens_used_month) || 0,
+      personhood: row.personhood || 'FIRST_PERSON_SINGULAR',
+      brandingAddress: parsedBrandingAddress,
       securityMode: row.security_mode || 'TEST_WHITELIST',
       allowedTestJids: JSON.parse(row.allowed_test_jids || '["237327075004656@lid"]'),
       requireDownPayment: Boolean(row.require_down_payment),
@@ -1632,33 +1684,47 @@ export class DynamicSchemaEngine {
           type: f.type,
         }));
 
+        const recentHistoryArray: Array<{ role: 'user' | 'model'; text: string }> = [];
+        if (recentHistory) {
+          const lines = recentHistory.split('\n');
+          for (const l of lines) {
+            if (l.startsWith('Cliente:')) {
+              recentHistoryArray.push({ role: 'user', text: l.replace(/^Cliente:\s*/, '') });
+            } else if (l.startsWith('Atendente:')) {
+              recentHistoryArray.push({ role: 'model', text: l.replace(/^Atendente:\s*/, '') });
+            }
+          }
+        }
+
+        const dynamicSystemInstruction = `Você é assistente virtual de ${config.tenantName}.
+${config.aiPersona.role}. ${config.aiPersona.extractionInstructions}
+${config.skillMarkdown}
+${dynamicCatalogBlock}
+Identidade e tom de voz: Atue com cordialidade profissional e brevidade.
+Fale em ${config.personhood === 'FIRST_PERSON_SINGULAR' ? '1ª pessoa do singular ("eu atendo", "meu espaço", "posso agendar")' : '1ª pessoa do plural ("nós atendemos")'}.
+Dados já respondidos: ${JSON.stringify(existingData || {})}
+Campos pendentes: ${JSON.stringify(missingFieldsHint || [])}
+Retorne na resposta conversacional uma mensagem acolhedora, humana e objetiva.`;
+
         const aiResult = await geminiService.processInputAndExtractJson({
           text: userText,
-          systemInstruction: `${config.aiPersona.role}. ${config.aiPersona.extractionInstructions}. Extraia APENAS os campos que o usuário realmente respondeu. NUNCA preencha preferencia_horario com saudações ("Olá", "Boa noite") ou reclamações. Para campos boolean_with_details use o formato {"value": true/false, "details": "string"}.`,
-          skillMarkdown: `${config.skillMarkdown}${dynamicCatalogBlock}`,
-          customerProfile,
-          extractionSchemaHint: schemaDescription,
-          existingData,
-          missingFieldsHint,
-          nextFieldPrompt: currentFieldObj?.questionPrompt,
-          recentHistory,
+          systemInstruction: dynamicSystemInstruction,
+          recentHistory: recentHistoryArray,
           apiKeyOverride: config.aiApiKey,
           modelOverride: config.aiModel,
         });
 
-        aiSucceeded = !aiResult.usedFallback;
-        isClientQuestion = Boolean(aiResult.isClientQuestion);
         conversationalReply = aiResult.conversationalReply || '';
+        aiSucceeded = Boolean(conversationalReply);
 
-        for (const [k, v] of Object.entries(aiResult.extractedData || {})) {
-          if (v !== null && v !== undefined && v !== '' && k !== 'raw_text') {
-            if (k === 'preferencia_horario' && !this.isValidSchedulePreference(String(v))) {
-              continue;
+        // Se houve chamada de função para salvar anamnese
+        if (aiResult.functionCalls && aiResult.functionCalls.length > 0) {
+          for (const fc of aiResult.functionCalls) {
+            if (fc.name === 'salvar_anamnese_concluida') {
+              if (fc.args.queixa_principal) updatedData.queixa_principal = fc.args.queixa_principal;
+              if (fc.args.alergias) updatedData.alergias_restricoes = fc.args.alergias;
+              if (fc.args.condicoes_medicas) updatedData.condicoes_especiais = fc.args.condicoes_medicas;
             }
-            if (k === 'queixa_principal' && this.isGreetingOnlyText(String(v))) {
-              continue;
-            }
-            updatedData[k] = v;
           }
         }
       } catch (err) {

@@ -46,6 +46,11 @@ function runSafeMigrations(): void {
     `ALTER TABLE appointments ADD COLUMN session_number INTEGER`,
     `ALTER TABLE tenants ADD COLUMN agenda_config TEXT DEFAULT '{}'`,
     `ALTER TABLE tenants ADD COLUMN whatsapp_hours_config TEXT DEFAULT '{}'`,
+    `ALTER TABLE tenants ADD COLUMN ai_provider TEXT DEFAULT 'gemini'`,
+    `ALTER TABLE tenants ADD COLUMN monthly_token_limit INTEGER DEFAULT 500000`,
+    `ALTER TABLE tenants ADD COLUMN tokens_used_month INTEGER DEFAULT 0`,
+    `ALTER TABLE tenants ADD COLUMN personhood TEXT DEFAULT 'FIRST_PERSON_SINGULAR'`,
+    `ALTER TABLE customers ADD COLUMN shadow_memory TEXT DEFAULT ''`,
   ];
 
   for (const sql of newColumns) {
@@ -55,6 +60,24 @@ function runSafeMigrations(): void {
       // Coluna já existe
     }
   }
+
+  // Cria tabela de catálogo relacional de serviços se não existir
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS service_catalog (
+      id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      description TEXT,
+      duration_min INTEGER NOT NULL,
+      price_single REAL NOT NULL,
+      price_package_4x REAL,
+      recommended_deposit REAL,
+      is_active INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_services_tenant ON service_catalog(tenant_id, is_active);
+  `);
 
   // Cria tabela de pacotes de clientes se não existir
   db.exec(`
@@ -284,8 +307,8 @@ function seedDefaultInstanceAndTenant(): void {
 
   db.prepare(`
     INSERT OR IGNORE INTO tenants (
-      id, name, vertical_preset_id, whatsapp_instance_id, owner_phone, ai_api_key, ai_model, security_mode, allowed_test_jids, services_catalog, skill_markdown, agenda_config, whatsapp_hours_config, branding_config
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      id, name, vertical_preset_id, whatsapp_instance_id, owner_phone, ai_api_key, ai_model, security_mode, allowed_test_jids, services_catalog, skill_markdown, agenda_config, whatsapp_hours_config, branding_config, ai_provider, monthly_token_limit, tokens_used_month, personhood
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     'tenant_demo_estetica',
     'ADEN Massoterapia',
@@ -293,7 +316,7 @@ function seedDefaultInstanceAndTenant(): void {
     defaultInstanceId,
     '5541991769268',
     envGeminiKey,
-    'gemini-3.8-flash',
+    'gemini-2.5-flash',
     'TEST_WHITELIST',
     JSON.stringify(['237327075004656@lid', '149091233304709@lid', 'ricardo']),
     defaultAdenServices,
@@ -304,8 +327,81 @@ function seedDefaultInstanceAndTenant(): void {
       primaryColor: '#5F7358',
       headerText: 'ADEN Massoterapia — Ficha de Pré-Atendimento & Bem-Estar',
       footerText: 'Agende seu momento de bem-estar! WhatsApp: (41) 99176-9268',
-    })
+      address: 'Rua das Palmeiras, 123 - Sala 4'
+    }),
+    'gemini',
+    500000,
+    0,
+    'FIRST_PERSON_SINGULAR'
   );
+
+  // Popula service_catalog a partir do catálogo oficial padrão da ADEN Massoterapia
+  const seedServices = [
+    {
+      id: 'srv_relaxante',
+      name: 'Massagem Relaxante',
+      description: 'Massagem suave e terapêutica para alívio de estresse e tensão muscular',
+      duration_min: 60,
+      price_single: 120.0,
+      price_package_4x: 420.0,
+      recommended_deposit: 36.0,
+    },
+    {
+      id: 'srv_drenagem',
+      name: 'Drenagem Linfática',
+      description: 'Redução de retenção de líquidos e inchaço corporal',
+      duration_min: 50,
+      price_single: 80.0,
+      price_package_4x: 280.0,
+      recommended_deposit: 24.0,
+    },
+    {
+      id: 'srv_pedras',
+      name: 'Massagem com Pedras Quentes',
+      description: 'Termoterapia profunda com pedras vulcânicas aquecidas',
+      duration_min: 75,
+      price_single: 170.0,
+      price_package_4x: 600.0,
+      recommended_deposit: 51.0,
+    },
+    {
+      id: 'srv_thai',
+      name: 'Thai Massage',
+      description: 'Alongamento profundo e alinhamento energético tradicional tailandês',
+      duration_min: 60,
+      price_single: 160.0,
+      price_package_4x: 560.0,
+      recommended_deposit: 48.0,
+    },
+    {
+      id: 'srv_localizada',
+      name: 'Massagem Localizada - Foco na Queixa',
+      description: 'Tratamento intensivo focado no ponto específico de dor (lombar, pescoço ou pernas)',
+      duration_min: 30,
+      price_single: 80.0,
+      price_package_4x: 280.0,
+      recommended_deposit: 24.0,
+    },
+  ];
+
+  const insertServiceStmt = db.prepare(`
+    INSERT OR IGNORE INTO service_catalog (
+      id, tenant_id, name, description, duration_min, price_single, price_package_4x, recommended_deposit, is_active
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
+  `);
+
+  for (const s of seedServices) {
+    insertServiceStmt.run(
+      s.id,
+      'tenant_demo_estetica',
+      s.name,
+      s.description,
+      s.duration_min,
+      s.price_single,
+      s.price_package_4x,
+      s.recommended_deposit
+    );
+  }
 
   // Preserva edições manuais feitas na Skill, lista de contatos e modo de segurança pelo painel
   db.prepare(`
