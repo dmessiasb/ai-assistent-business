@@ -577,3 +577,22 @@ Implementadas melhorias para permitir gestão visual de atendimentos por funil d
      - Tabela detalhada por empresa exibindo provedor, modelo de IA configurado, contadores numéricos, barra de progresso visual (verde, amarela ou vermelha de acordo com o consumo) e status de cota.
      - Ação direta para ajustar o limite mensal contratado (`PATCH /api/v1/tenants/:id`) com feedback imediato.
    - Atualizado o modal/formulário de edição de empresas para inclusão dos parâmetros de IA e cotas.
+
+
+## [2026-11-11] Fase 31 - Unificação e Deduplicação Estrita de Clientes no Funil de Vendas (1 Card por Pessoa)
+Implementada a regra de negócio para garantir que nenhuma pessoa/cliente seja duplicada no Funil de Vendas (Kanban):
+
+1. **Deduplicação de Cards no Frontend ([index.html](file:///c:/_dev/atendimento_whatsapp/public/index.html)):**
+   - Na função `renderKanbanBoard(records)`, os atendimentos agora são agrupados e desduplicados pelo identificador do cliente (`customer_id` / `customer_phone`).
+   - Cada pessoa passa a ocupar exatamente **uma única coluna** no funil, representando o seu estágio mais relevante e atual no momento.
+   - Ordem de prioridade de status adotada:
+     1. `IN_PROGRESS` (Em conversa / atendimento ativo)
+     2. `PENDING_PAYMENT` (Aguardando Sinal / Pix)
+     3. `COMPLETED` (Atendimento confirmado / concluído)
+     4. `CANCELLED` (Cancelado / arquivado)
+     - Desempate para status iguais: registro com `updated_at` mais recente.
+   - Os contadores de cada coluna (badges do Kanban) agora refletem o número exato de clientes distintos presentes em cada etapa.
+
+2. **Integridade de Ficha Única no Backend ([server.ts](file:///c:/_dev/atendimento_whatsapp/src/server.ts)):**
+   - No endpoint `PATCH /api/v1/records/:id/status`, ao mover uma ficha para um status ativo (`IN_PROGRESS`, `PENDING_PAYMENT` ou `COMPLETED`), o backend cancela/arquiva automaticamente quaisquer fichas anteriores redundantes daquele mesmo cliente na mesma empresa (`UPDATE dynamic_records SET status = 'CANCELLED' WHERE customer_id = ? AND tenant_id = ? AND id != ? AND status != 'CANCELLED'`).
+   - Isso garante coerência permanente entre a base de dados relacional e a visualização do operador no Kanban.

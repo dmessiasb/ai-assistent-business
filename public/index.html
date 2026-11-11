@@ -1808,7 +1808,44 @@
       // Limpa colunas
       Object.values(columns).forEach(col => { if (col) col.innerHTML = ''; });
 
+      // DEDUPLICAÇÃO DE CLIENTES NO FUNIL:
+      // Cada pessoa (cliente) só pode aparecer UMA ÚNICA VEZ em todo o funil de vendas.
+      // Prioridade de exibição da etapa ativa do cliente:
+      // 1. IN_PROGRESS (em atendimento/conversa)
+      // 2. PENDING_PAYMENT (aguardando sinal/pix)
+      // 3. COMPLETED (concluído/agendado)
+      // 4. CANCELLED (cancelado/arquivado)
+      // Desempate: updated_at mais recente.
+      const statusWeight = {
+        IN_PROGRESS: 4,
+        PENDING_PAYMENT: 3,
+        COMPLETED: 2,
+        CANCELLED: 1
+      };
+
+      const customerMap = new Map();
+
       records.forEach(r => {
+        const key = r.customer_id || r.customer_phone || r.id;
+        const currentBest = customerMap.get(key);
+
+        if (!currentBest) {
+          customerMap.set(key, r);
+        } else {
+          const rWeight = statusWeight[r.status] || 0;
+          const bestWeight = statusWeight[currentBest.status] || 0;
+          const rTime = new Date(r.updated_at || 0).getTime();
+          const bestTime = new Date(currentBest.updated_at || 0).getTime();
+
+          if (rWeight > bestWeight || (rWeight === bestWeight && rTime > bestTime)) {
+            customerMap.set(key, r);
+          }
+        }
+      });
+
+      const uniqueCustomerRecords = Array.from(customerMap.values());
+
+      uniqueCustomerRecords.forEach(r => {
         let status = r.status || 'IN_PROGRESS';
         if (!columns[status]) status = 'IN_PROGRESS';
         counts[status] = (counts[status] || 0) + 1;
@@ -1825,7 +1862,7 @@
         card.innerHTML = `
           <div class="flex items-start justify-between gap-1.5">
             <div class="font-bold text-white text-xs truncate">${r.customer_name}</div>
-            <span class="text-[10px] text-slate-500 font-mono">${r.customer_phone.slice(-4)}</span>
+            <span class="text-[10px] text-slate-500 font-mono">${(r.customer_phone || '').slice(-4)}</span>
           </div>
 
           <div class="text-[11px] text-slate-300">

@@ -631,10 +631,28 @@ export const server = http.createServer(async (req, res) => {
         sendJson(res, 400, { error: `Status inválido. Escolha um dos seguintes: ${validStatuses.join(', ')}` });
         return;
       }
+
+      // Localiza o customer_id e tenant_id desta ficha
+      const currentRec = db
+        .prepare(`SELECT customer_id, tenant_id FROM dynamic_records WHERE id = ? LIMIT 1`)
+        .get(recordId) as { customer_id: string; tenant_id: string } | undefined;
+
       db.prepare(`UPDATE dynamic_records SET status = ?, updated_at = datetime('now') WHERE id = ?`).run(
         newStatus,
         recordId
       );
+
+      // Regra de Integridade do Funil: O cliente só pode estar em 1 etapa por vez.
+      // Se a ficha foi movida para um status ativo (ex: IN_PROGRESS ou PENDING_PAYMENT),
+      // quaisquer outras fichas anteriores do mesmo cliente nessa mesma empresa são arquivadas/canceladas
+      if (currentRec?.customer_id && (newStatus === 'IN_PROGRESS' || newStatus === 'PENDING_PAYMENT' || newStatus === 'COMPLETED')) {
+        db.prepare(
+          `UPDATE dynamic_records 
+           SET status = 'CANCELLED', updated_at = datetime('now') 
+           WHERE customer_id = ? AND tenant_id = ? AND id != ? AND status != 'CANCELLED'`
+        ).run(currentRec.customer_id, currentRec.tenant_id, recordId);
+      }
+
       sendJson(res, 200, { success: true, recordId, status: newStatus });
       return;
     }
