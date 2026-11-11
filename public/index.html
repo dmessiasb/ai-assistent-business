@@ -335,12 +335,8 @@
             </div>
 
             <div class="border-t border-slate-800 pt-5">
-              <h3 class="text-sm font-bold text-emerald-400 mb-3">📱 Vínculo de WhatsApp & Segurança de Mensagens</h3>
-              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label class="block text-slate-300 font-semibold mb-1">Instância de WhatsApp da Empresa</label>
-                  <select id="emp-wa-instance" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white"></select>
-                </div>
+              <h3 class="text-sm font-bold text-emerald-400 mb-3">📱 Segurança de Mensagens & Modo Ditado</h3>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label class="block text-slate-300 font-semibold mb-1">WhatsApp da Profissional (Modo Ditado)</label>
                   <input id="emp-owner-phone" placeholder="Ex: 5541991769268" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white" />
@@ -1325,7 +1321,7 @@
     async function loadAll() {
       const [healthRes, instRes, whRes, presetsRes, tenantsRes, recordsRes, flwRes, logsRes] = await Promise.all([
         fetch('/api/v1/health').then(r => r.json()),
-        fetch('/api/v1/instances').then(r => r.json()),
+        fetch(`/api/v1/instances?tenantId=${encodeURIComponent(selectedTenantId || '')}`).then(r => r.json()),
         fetch('/api/v1/webhooks').then(r => r.json()),
         fetch('/api/v1/vertical-presets').then(r => r.json()),
         fetch('/api/v1/tenants').then(r => r.json()),
@@ -1478,29 +1474,25 @@
       // RENDER KANBAN BOARD (Funil de Vendas com Drag-and-Drop)
       renderKanbanBoard(recordsRes.records);
 
-      // Render Instances (Aba WhatsApp)
-      document.getElementById('instances-list').innerHTML = cachedInstances.length === 0
+      // Render Instances (Aba WhatsApp da Empresa)
+      const tenantInstances = cachedInstances.filter(i => !currentTenant?.whatsapp_instance_id || i.id === currentTenant.whatsapp_instance_id);
+
+      document.getElementById('instances-list').innerHTML = tenantInstances.length === 0
         ? `<div class="bg-slate-900 border border-dashed border-slate-700 rounded-xl p-8 text-center space-y-3">
-             <div class="text-sm font-bold text-slate-300">Nenhuma sessão de WhatsApp ativa no momento.</div>
-             <p class="text-xs text-slate-400">Clique abaixo ou use o campo acima para criar uma nova sessão limpa e escanear o QR Code.</p>
-             <button onclick="createNewInstance()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-5 py-2.5 rounded-lg shadow transition">
-               + Criar Nova Sessão de WhatsApp Agora
+             <div class="text-sm font-bold text-slate-300">Nenhuma conexão de WhatsApp ativa para esta empresa (${currentTenant?.name || ''}).</div>
+             <p class="text-xs text-slate-400">Clique abaixo para criar uma sessão exclusiva e conectar o WhatsApp desta empresa escaneando o QR Code.</p>
+             <button onclick="createNewInstanceDirect()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-5 py-2.5 rounded-lg shadow transition">
+               + Conectar WhatsApp Desta Empresa
              </button>
            </div>`
-        : cachedInstances.map(inst => {
-            const isLinkedToCurrent = currentTenant && currentTenant.whatsapp_instance_id === inst.id;
+        : tenantInstances.map(inst => {
             return `
-              <div class="bg-slate-900 border ${isLinkedToCurrent ? 'border-emerald-700/70' : 'border-slate-800'} rounded-xl p-5 space-y-3">
+              <div class="bg-slate-900 border border-emerald-700/60 rounded-xl p-5 space-y-3">
                 <div class="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <div class="flex items-center gap-2">
                       <span class="font-bold text-sm text-white">${inst.name}</span>
-                      ${isLinkedToCurrent
-                        ? `<span class="text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-700 px-2 py-0.5 rounded-full font-semibold">🔗 Vinculada a ${currentTenant.name}</span>`
-                        : currentTenant
-                          ? `<button onclick="linkInstanceToActiveTenant('${inst.id}')" class="text-[10px] bg-slate-800 hover:bg-indigo-900 text-indigo-300 border border-indigo-700/50 px-2 py-0.5 rounded-full font-semibold transition">🔗 Vincular a ${currentTenant.name}</button>`
-                          : ''
-                      }
+                      <span class="text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-700 px-2 py-0.5 rounded-full font-semibold">🔗 Empresa: ${currentTenant.name}</span>
                     </div>
                     <div class="text-xs text-slate-400 mt-1">ID: <code>${inst.id}</code> ${inst.phone_number ? `• 📞 Conectado: <b class="text-emerald-300">${inst.phone_number}</b>` : ''}</div>
                   </div>

@@ -611,3 +611,16 @@ Atendendo à necessidade de centralizar a gestão e governança por empresa, tod
 
 2. **Navegação Limpa e Intuitiva:**
    - A barra lateral (sidebar) e as subnav pills no mobile agora concentram as funções da empresa sob a categoria unificada **"Perfil da Empresa"**, facilitando o uso rápido pelo smartphone ou computador.
+
+
+## [2026-11-11] Fase 33 - Isolamento Estrito de Registros por Empresa na Tela Perfil (Conexão WhatsApp e Dados)
+Implementado isolamento estrito para garantir que na tela **Perfil da Empresa** apareçam **apenas os registros e conexões pertencentes à empresa selecionada**:
+
+1. **Filtro no Backend para Instâncias de WhatsApp ([server.ts](file:///c:/_dev/atendimento_whatsapp/src/server.ts)):**
+   - O endpoint `GET /api/v1/instances` agora suporta o parâmetro `?tenantId=...`.
+   - Ao receber o `tenantId`, o backend consulta a instância vinculada àquela empresa (`tenants.whatsapp_instance_id`) e retorna estritamente a sessão pertencente a ela, impedindo vazamento de sessões de outros clientes/empresas na visualização de perfil.
+
+2. **Frontend com Isolamento Contextual ([index.html](file:///c:/_dev/atendimento_whatsapp/public/index.html)):**
+   - A chamada `fetch('/api/v1/instances?tenantId=...')` passa a respeitar a empresa selecionada no seletor global (`🏢 Empresa Ativa`).
+   - A renderização da sub-aba **"📲 Conexão de WhatsApp"** agora exibe exclusivamente o card de WhatsApp daquela empresa com seu respectivo QR Code, status de conexão e botão para criar/reconectar.
+   - Removido o seletor misturado de instâncias que permitia ver ou vincular sessões de terceiros acidentalmente.

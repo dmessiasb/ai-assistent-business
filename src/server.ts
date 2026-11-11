@@ -127,11 +127,22 @@ export const server = http.createServer(async (req, res) => {
     }
 
     if (method === 'GET' && pathname === '/api/v1/instances') {
-      const rows = db
-        .prepare(
-          `SELECT id, name, phone_number, status, qr_code_base64, api_key, created_at, updated_at FROM whatsapp_instances ORDER BY created_at DESC`
-        )
-        .all();
+      const tenantFilter = parsedUrl.searchParams.get('tenantId');
+      let sql = `SELECT id, name, phone_number, status, qr_code_base64, api_key, created_at, updated_at FROM whatsapp_instances ORDER BY created_at DESC`;
+      let rows;
+
+      if (tenantFilter) {
+        // Retorna a instância vinculada à empresa solicitada
+        const tenantRow = db.prepare(`SELECT whatsapp_instance_id FROM tenants WHERE id = ? LIMIT 1`).get(tenantFilter) as { whatsapp_instance_id: string } | undefined;
+        if (tenantRow?.whatsapp_instance_id) {
+          rows = db.prepare(`SELECT id, name, phone_number, status, qr_code_base64, api_key, created_at, updated_at FROM whatsapp_instances WHERE id = ?`).all(tenantRow.whatsapp_instance_id);
+        } else {
+          rows = [];
+        }
+      } else {
+        rows = db.prepare(sql).all();
+      }
+
       sendJson(res, 200, { instances: rows });
       return;
     }
