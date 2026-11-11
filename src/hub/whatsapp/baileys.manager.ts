@@ -573,7 +573,14 @@ IMPORTANTE:
 
         const deviceDestJid: string = msg.message?.deviceSentMessage?.destinationJid || '';
         const remoteJid: string = deviceDestJid || msg.key?.remoteJid || '';
-        if (!remoteJid || remoteJid.endsWith('@g.us') || remoteJid === 'status@broadcast') continue;
+        if (
+          !remoteJid ||
+          remoteJid.endsWith('@g.us') ||
+          remoteJid === 'status@broadcast' ||
+          remoteJid.endsWith('@newsletter')
+        ) {
+          continue;
+        }
 
         const rawText = (
           innerMsg.conversation ||
@@ -878,7 +885,14 @@ IMPORTANTE:
         const latestByJid = new Map<string, any>();
         for (const m of messages) {
           const jid = m?.key?.remoteJid;
-          if (!jid || jid.endsWith('@g.us') || jid === 'status@broadcast') continue;
+          if (
+            !jid ||
+            jid.endsWith('@g.us') ||
+            jid === 'status@broadcast' ||
+            jid.endsWith('@newsletter')
+          ) {
+            continue;
+          }
           const prev = latestByJid.get(jid);
           const prevTs = Number(prev?.messageTimestamp?.low || prev?.messageTimestamp || 0);
           const curTs = Number(m?.messageTimestamp?.low || m?.messageTimestamp || 0);
@@ -1001,12 +1015,12 @@ IMPORTANTE:
     const logId = `msg_${crypto.randomUUID()}`;
 
     // TRAVA ANTI-DUPLICAÇÃO RÍGIDA:
-    // Se enviou mensagem para o mesmo JID há menos de 3.5 segundos, ou se for o mesmo texto há menos de 30 segundos, bloqueia!
+    // Se enviou mensagem para o mesmo JID há menos de 10 segundos, ou se for o mesmo texto há menos de 5 minutos (300s), bloqueia!
     const now = Date.now();
     const lastSentTime = this.lastSentTimeByJid.get(remoteJid) || 0;
     const lastSentContent = this.lastSentContentByJid.get(remoteJid) || '';
-    const isTooFast = now - lastSentTime < 3500;
-    const isSameTextRecent = now - lastSentTime < 30000 && lastSentContent.trim() === options.text.trim();
+    const isTooFast = now - lastSentTime < 8000;
+    const isSameTextRecent = now - lastSentTime < 300_000 && lastSentContent.trim() === options.text.trim();
 
     if (isTooFast || isSameTextRecent) {
       console.warn(`🛑 [Baileys Anti-Duplicação] Bloqueado envio duplicado/em rajada para ${remoteJid} (intervalo=${now - lastSentTime}ms). Texto: "${options.text.slice(0, 40)}..."`);

@@ -351,6 +351,41 @@ export function isProfessionalActivelyResponding(params: {
     return true;
   }
 
+  // 1.1 Se a profissional respondeu manualmente a qualquer momento nas últimas 3 horas, e a conversa seguiu com mensagens trocadas, estende a proteção
+  const recentExtendedManual = db
+    .prepare(
+      `SELECT created_at, raw_content
+       FROM hub_message_logs
+       WHERE (remote_jid = ? OR sender_phone = ?)
+         AND direction = 'OUTBOUND'
+         AND (push_name LIKE '%Dono%' OR push_name LIKE '%Você%' OR push_name LIKE '%Profissional%')
+         AND created_at >= datetime('now', '-3 hours')
+       ORDER BY created_at DESC
+       LIMIT 1`
+    )
+    .get(params.remoteJid, cleanPhone) as { created_at: string; raw_content: string } | undefined;
+
+  if (recentExtendedManual) {
+    // Se a profissional falou nas últimas 3 horas, o bot só pode intervir se o cliente fizer uma pergunta explícita sobre agendamento/procedimento
+    const lastInbound = db
+      .prepare(
+        `SELECT raw_content FROM hub_message_logs
+         WHERE (remote_jid = ? OR sender_phone = ?) AND direction = 'INBOUND'
+         ORDER BY created_at DESC LIMIT 1`
+      )
+      .get(params.remoteJid, cleanPhone) as { raw_content: string } | undefined;
+
+    const inTxt = (lastInbound?.raw_content || '').toLowerCase();
+    const isExplicitBookingOrService =
+      /\b(agend|marc|hor[aá]ri|sess[aã]o|massag|procediment|valor|pre[cç]|cat[aá]log|endere[cç]|onde)\b/i.test(
+        inTxt
+      );
+
+    if (!isExplicitBookingOrService) {
+      return true; // Mantém silêncio absoluto para assuntos diversos/pessoais!
+    }
+  }
+
   // 2. A última mensagem desse chat foi enviada pela profissional manualmente?
   const lastMsg = db
     .prepare(
@@ -1562,11 +1597,14 @@ export class DynamicSchemaEngine {
       return 'CLIENT_QUESTION_OR_DOUBT';
     }
 
-    // 1. Links soltos, risadas, reações ou comentários casuais -> Ficar em silêncio!
+    // 1. Links soltos, risadas, reações, comentários casuais ou conversa pessoal/doméstica -> Ficar em silêncio!
     if (
       /^https?:\/\//i.test(text) ||
-      /^(k{3,}|haha+|rs+|lol|😂|🤣|❤️|👍)+$/i.test(lower) ||
-      /^(entendi|legal|show|top|beleza|blz|ta bom|tá bom|ok|aham|no vivo\s*\??|verdade|pois [eé]|caramba|nossa)$/i.test(
+      /^(k{3,}|haha+|rs+|lol|😂|🤣|❤️|👍|🙏|🫠)+$/i.test(lower) ||
+      /^(entendi|legal|show|top|beleza|blz|ta bom|tá bom|ok|aham|no vivo\s*\??|verdade|pois [eé]|caramba|nossa|valeu|obrigad[oa]|de nada|combinado|fechou)$/i.test(
+        lower
+      ) ||
+      /\b(term[oô]metro|aqu[aá]rio|temperatura\s+d[ao]\s+[aá]gua|pl[aá]stico|pacotes?|sal[aã]o|saindo|chegando|em\s+casa|paranagu[aá]|trabalho|mercado|a[cç]ougue|almo[cç]o|janta|casa|minutos?\s+estou)\b/i.test(
         lower
       )
     ) {
@@ -1628,12 +1666,34 @@ export class DynamicSchemaEngine {
 
     // 5. Se já existe uma entrevista de anamnese ativa (IN_PROGRESS), qualquer resposta normal ou áudio continua o atendimento!
     if (params.hasActiveInProgressRecord && params.currentStepFieldKey) {
+      // Se for conversa pessoal evidente no meio, não preenche nem força pergunta!
+      if (
+        /\b(term[oô]metro|aqu[aá]rio|temperatura|pl[aá]stico|pacotes?|sal[aã]o|saindo|chegando|em\s+casa|paranagu[aá]|a[cç]ougue|almo[cç]o)\b/i.test(
+          lower
+        )
+      ) {
+        return 'CASUAL_CHAT_IGNORE';
+      }
       return 'ANAMNESIS_ANSWER';
     }
 
-    // 6. Se o cliente já tem ficha concluída (COMPLETED) ou enviou um ÁUDIO no atendimento, responde a dúvida dele!
+    // 6. Se o cliente já tem ficha concluída (COMPLETED) ou enviou um ÁUDIO no atendimento:
+    // IMPORTANTE: Só responde se a mensagem parecer minimamente direcionada a atendimento ou dúvida!
+    // Se for conversa pessoal, recado do dia a dia ou assunto aleatório, IGNORA!
     if (params.hasCompletedRecord || params.messageType === 'AUDIO') {
-      return 'CLIENT_QUESTION_OR_DOUBT';
+      const looksLikeBusinessOrQuestion =
+        text.includes('?') ||
+        params.messageType === 'AUDIO' ||
+        /\b(agend|marc|hor[aá]ri|sess[aã]o|massag|procediment|valor|pre[cç]|cat[aá]log|endere[cç]|onde|d[uú]vid|dor|atend)\b/i.test(
+          lower
+        );
+
+      if (looksLikeBusinessOrQuestion) {
+        return 'CLIENT_QUESTION_OR_DOUBT';
+      }
+
+      // Caso contrário, é mensagem pessoal/avulsa (ex: "estou saindo", "obrigado por me trazer", etc.) -> Silêncio!
+      return 'CASUAL_CHAT_IGNORE';
     }
 
     return 'CASUAL_CHAT_IGNORE';

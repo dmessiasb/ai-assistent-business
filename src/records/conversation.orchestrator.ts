@@ -267,17 +267,23 @@ export class ConversationOrchestrator {
       return result;
     }
 
-    // Deduplicação: se a última mensagem enviada pelo bot nos últimos 8 segundos tiver o mesmo texto, não reenvia!
+    // Deduplicação estrita:
+    // Se a última mensagem enviada para este cliente nos últimos 5 minutos (300 segundos) tiver exatamente o mesmo texto, BLOQUEIA!
     const lastOutbound = db
       .prepare(
         `SELECT raw_content FROM hub_message_logs
-         WHERE (remote_jid = ? OR sender_phone = ?) AND direction = 'OUTBOUND' AND created_at >= datetime('now', '-8 seconds')
+         WHERE (remote_jid = ? OR sender_phone = ?) AND direction = 'OUTBOUND' AND created_at >= datetime('now', '-300 seconds')
          ORDER BY created_at DESC LIMIT 1`
       )
       .get(payload.data.remoteJid, fromPhone) as { raw_content: string } | undefined;
 
-    if (lastOutbound && lastOutbound.raw_content === result.replyMessage) {
-      console.log(`⚠️ [Deduplicação] Mensagem idêntica recém-enviada para ${fromPhone}. Ignorando duplicação.`);
+    if (lastOutbound && lastOutbound.raw_content.trim() === result.replyMessage.trim()) {
+      console.log(`⚠️ [Deduplicação Orquestrador] Mensagem idêntica enviada recentemente para ${fromPhone}. Ignorando duplicação.`);
+      return result;
+    }
+
+    // Se a resposta for vazia, não envia nada
+    if (!result.replyMessage || !result.replyMessage.trim()) {
       return result;
     }
 
@@ -388,13 +394,24 @@ export class ConversationOrchestrator {
         }
 
         const result = await this.handleClientInterview(config, senderPhone, pushName, mergedText, 'TEXT');
-        if (result.replyMessage) {
-          await whatsappManager.sendTextMessage({
-            instanceId: config.whatsappInstanceId,
-            toPhone: senderPhone,
-            remoteJid,
-            text: result.replyMessage,
-          });
+        if (result.replyMessage && result.replyMessage.trim()) {
+          // Checa deduplicação antes do envio da fila
+          const lastOutbound = db
+            .prepare(
+              `SELECT raw_content FROM hub_message_logs
+               WHERE (remote_jid = ? OR sender_phone = ?) AND direction = 'OUTBOUND' AND created_at >= datetime('now', '-300 seconds')
+               ORDER BY created_at DESC LIMIT 1`
+            )
+            .get(remoteJid, senderPhone) as { raw_content: string } | undefined;
+
+          if (!lastOutbound || lastOutbound.raw_content.trim() !== result.replyMessage.trim()) {
+            await whatsappManager.sendTextMessage({
+              instanceId: config.whatsappInstanceId,
+              toPhone: senderPhone,
+              remoteJid,
+              text: result.replyMessage,
+            });
+          }
         }
         processedCount += items.length;
       }

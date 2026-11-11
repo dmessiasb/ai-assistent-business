@@ -528,7 +528,24 @@ Atendendo aos requisitos de uso via smartphone/Antigravity Remote:
      - 📱 *Expediente WhatsApp & Fila* (Horário comercial do bot, mensagem de fora do expediente e monitoramento de fila).
 
 3. **Validação de Acesso Remoto:**
-   - Testado e validado o túnel seguro Cloudflare HTTPS (`https://row-assume-james-blue.trycloudflare.com`).
+   - Testado e validado o túnel seguro Cloudflare HTTPS (`https://plugins-casio-load-roses.trycloudflare.com`).
+
+## [2026-11-11] Fase 30 - Filtro de Contexto Anti-Intromissão, Silêncio em Conversa Pessoal e Deduplicação Estrita
+Correção definitiva do comportamento do assistente virtual ao atravessar conversas humanas ou disparar mensagens duplicadas:
+
+1. **Eliminação do Fallback Repetitivo e Atualização do Modelo Gemini ([gemini.service.ts](file:///c:/_dev/atendimento_whatsapp/src/hub/ai/gemini.service.ts)):**
+   - Atualizada a ordem de modelos do Gemini para utilizar prioritariamente `gemini-3.5-flash-lite`, `gemini-3.5-flash` e `gemini-3.8-flash` (eliminando erros 404 e 429 de modelos antigos).
+   - O fallback local não envia mais o texto genérico fixo *"Olá! Recebi sua mensagem e já estou verificando para te responder da melhor forma..."*. Se a mensagem não tiver relação com procedimentos, serviços ou agendamentos, o assistente retorna **silêncio absoluto**.
+
+2. **Detecção e Silêncio em Conversas Pessoais e Não-Relacionadas ([schema.engine.ts](file:///c:/_dev/atendimento_whatsapp/src/records/schema.engine.ts)):**
+   - Expandido o classificador de intenção (`classifyConversationIntent`) para ignorar conversas domésticas/pessoais (ex: compras, termômetro, aquário, viagem, deslocamento, recados familiares, canais/newsletters).
+   - Se o cliente já possui atendimento ou ficha concluída (`COMPLETED`), o assistente só responde caso a mensagem contenha dúvida explícita (`?`) ou termos de agendamento/procedimento.
+   - Proteção de intervenção humana estendida: se a profissional interagiu no chat nas últimas 3 horas, o bot permanece em silêncio contínuo, a menos que haja solicitação explícita de procedimento/agendamento.
+
+3. **Trava Anti-Duplicação Estrita em Três Camadas ([baileys.manager.ts](file:///c:/_dev/atendimento_whatsapp/src/hub/whatsapp/baileys.manager.ts) & [conversation.orchestrator.ts](file:///c:/_dev/atendimento_whatsapp/src/records/conversation.orchestrator.ts)):**
+   - Camada 1 (Baileys Send): Trava de envio duplicado com janela de 5 minutos (300 segundos) para o mesmo texto e 8 segundos para rajadas.
+   - Camada 2 (Orquestrador): Consulta aos logs do SQLite antes de qualquer envio; se a mesma mensagem foi enviada recentemente ao cliente, a emissão é abortada.
+   - Camada 3 (Canais/Newsletters): Mensagens de canais (`@newsletter`) são ignoradas imediatamente, impedindo acúmulo e disparo na fila noturna.
 
 ## [2026-11-09] Fase 28 - Funil de Vendas Kanban Multi-Empresa e Gestão de Limites de Tokens
 Implementadas melhorias para permitir gestão visual de atendimentos por funil de vendas (Kanban), separação estrita de dados por empresa e governança do consumo de tokens de inteligência artificial:

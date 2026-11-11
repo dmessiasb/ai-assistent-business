@@ -115,10 +115,16 @@ export class GeminiService {
       requestBody.tools = input.tools;
     }
 
-    const preferredModel = input.modelOverride || this.model || 'gemini-2.5-flash';
-    const modelsToTry = [preferredModel, 'gemini-2.5-flash', 'gemini-flash-latest', 'gemini-3.8-flash'].filter(
-      (m, idx, arr) => arr.indexOf(m) === idx
-    );
+    const preferredModel = input.modelOverride || this.model || 'gemini-3.5-flash-lite';
+    const modelsToTry = [
+      preferredModel,
+      'gemini-3.5-flash-lite',
+      'gemini-3.5-flash',
+      'gemini-3.8-flash',
+      'gemini-flash-latest',
+      'gemini-flash-lite-latest',
+      'gemini-2.5-flash',
+    ].filter((m, idx, arr) => arr.indexOf(m) === idx);
 
     const errors: string[] = [];
     for (const modelCandidate of modelsToTry) {
@@ -186,11 +192,31 @@ export class GeminiService {
   }
 
   private runLocalAgnosticFallback(input: GeminiProcessInput): GeminiProcessResult {
-    const rawText = input.text || '';
-    let fallbackReply = 'Olá! Recebi sua mensagem e já estou verificando para te responder da melhor forma. Como posso te ajudar hoje?';
+    const rawText = (input.text || '').trim();
 
-    if (/^(oi|ol[aá]|bom\s+dia|boa\s+tarde|boa\s+noite|opa|e\s+a[ií])[\s!.,?]*$/i.test(rawText.trim())) {
+    // Se a mensagem for claramente conversa pessoal, logística ou sem sentido para o negócio, silêncio absoluto!
+    if (
+      !rawText ||
+      /^(ok|beleza|blz|ta|tá|combinado|chegou|já comprei|esperando|salão|termômetro|aquário|temperatura|padrão|detalhes|saindo|casa|estou|indo|daqui|trabalho|obrigado|valeu|abraço|beijo|boa noite|bom dia|tarde)[\s!.,?]*$/i.test(
+        rawText
+      ) ||
+      /\b(term[oô]metro|aqu[aá]rio|temperatura|pl[aá]stico|pacotes|sal[aã]o|saindo|chegando|em casa|paranagu[aá]|mercado|a[cç]ougue|carne|pre[cç]o bom)\b/i.test(
+        rawText
+      )
+    ) {
+      return {
+        transcription: rawText,
+        conversationalReply: '', // SILÊNCIO: Não atravessa a conversa pessoal!
+        functionCalls: undefined,
+        tokensUsed: 0,
+      };
+    }
+
+    let fallbackReply = '';
+    if (/^(oi|ol[aá]|bom\s+dia|boa\s+tarde|boa\s+noite|opa|e\s+a[ií])[\s!.,?]*$/i.test(rawText)) {
       fallbackReply = 'Olá, tudo bem? Que bom falar com você! Como posso te ajudar hoje? 😊';
+    } else if (/\b(agendar|marcar|massagem|sess[aã]o|hor[aá]rio|atendimento|valor|pre[cç]o)\b/i.test(rawText)) {
+      fallbackReply = 'Olá! Temos horários disponíveis para atendimento. Qual procedimento você gostaria de agendar?';
     }
 
     return {
