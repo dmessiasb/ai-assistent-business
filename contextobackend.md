@@ -596,3 +596,18 @@ Implementada a regra de negócio para garantir que nenhuma pessoa/cliente seja d
 2. **Integridade de Ficha Única no Backend ([server.ts](file:///c:/_dev/atendimento_whatsapp/src/server.ts)):**
    - No endpoint `PATCH /api/v1/records/:id/status`, ao mover uma ficha para um status ativo (`IN_PROGRESS`, `PENDING_PAYMENT` ou `COMPLETED`), o backend cancela/arquiva automaticamente quaisquer fichas anteriores redundantes daquele mesmo cliente na mesma empresa (`UPDATE dynamic_records SET status = 'CANCELLED' WHERE customer_id = ? AND tenant_id = ? AND id != ? AND status != 'CANCELLED'`).
    - Isso garante coerência permanente entre a base de dados relacional e a visualização do operador no Kanban.
+
+
+## [2026-11-11] Fase 32 - Unificação das Configurações da Empresa na Tela Perfil (Sub-Abas de Persona, WhatsApp e Preços)
+Atendendo à necessidade de centralizar a gestão e governança por empresa, todas as configurações específicas de cada negócio foram integradas dentro da tela **"⚙️ Perfil da Empresa"**, eliminando menus soltos e segregando tudo em sub-abas dedicadas:
+
+1. **Estrutura Unificada de Sub-Abas em "Perfil da Empresa" ([index.html](file:///c:/_dev/atendimento_whatsapp/public/index.html)):**
+   - **🏢 Dados & IA**: Nome, nicho (`VerticalPreset`), Chave Gemini exclusiva, modelo e modo de segurança (Produção vs. Teste com whitelist).
+   - **💆‍♀️ Agenda de Preços & Pix**: Catálogo de procedimentos com durações, valores avulsos, pacotes de 4 sessões, chave Pix e cálculo dinâmico de sinal.
+   - **🗓️ Horários da Maca**: Horários de abertura, fechamento, almoço, dias úteis da semana e buffer de higienização entre atendimentos.
+   - **📱 Expediente WhatsApp & Fila**: Definição do horário de atendimento do bot, resposta automática amigável para mensagens fora do expediente e fila noturna.
+   - **🛡️ Regras de Persona & IA**: Editor integrado do `SKILL.md` exclusivo da empresa selecionada (tom de voz, persona, diretrizes clínicas e guardrails) juntamente com o roteiro de perguntas automáticas invisíveis do nicho.
+   - **📲 Conexão de WhatsApp**: Painel completo do Baileys para a empresa (geração e escaneamento de QR Code, status em tempo real `CONNECTED`/`QR_READY`, troca de aparelho e simulador de envio real).
+
+2. **Navegação Limpa e Intuitiva:**
+   - A barra lateral (sidebar) e as subnav pills no mobile agora concentram as funções da empresa sob a categoria unificada **"Perfil da Empresa"**, facilitando o uso rápido pelo smartphone ou computador.

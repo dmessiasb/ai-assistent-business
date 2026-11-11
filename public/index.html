@@ -79,16 +79,10 @@
 
         <!-- CATEGORIA 3: CONFIGURAÇÃO DO NEGÓCIO -->
         <div class="px-3 pt-4 pb-1 text-[10px] font-bold uppercase tracking-wider text-purple-400 flex items-center gap-1.5">
-          <span>🏢</span> Configuração da Empresa
+          <span>🏢</span> Empresa Ativa
         </div>
         <button onclick="switchTab('empresas')" id="nav-empresas" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-left transition">
-          <span>⚙️</span> Perfil, Agenda & Preços
-        </button>
-        <button onclick="switchTab('skills')" id="nav-skills" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-left transition">
-          <span>🛡️</span> Regras & Persona da IA
-        </button>
-        <button onclick="switchTab('whatsapp')" id="nav-whatsapp" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-left transition">
-          <span>📱</span> Conexões WhatsApp
+          <span>⚙️</span> Perfil da Empresa
         </button>
 
         <!-- CATEGORIA 4: DESENVOLVEDOR & ECOSSISTEMA -->
@@ -163,13 +157,7 @@
         🪙 Tokens IA
       </button>
       <button onclick="switchTab('empresas')" id="subnav-empresas" class="subnav-pill text-xs px-3 py-1.5 rounded-full font-medium shrink-0 transition text-slate-400 hover:text-white hover:bg-slate-800">
-        ⚙️ Config Empresa
-      </button>
-      <button onclick="switchTab('skills')" id="subnav-skills" class="subnav-pill text-xs px-3 py-1.5 rounded-full font-medium shrink-0 transition text-slate-400 hover:text-white hover:bg-slate-800">
-        🛡️ Regras IA
-      </button>
-      <button onclick="switchTab('whatsapp')" id="subnav-whatsapp" class="subnav-pill text-xs px-3 py-1.5 rounded-full font-medium shrink-0 transition text-slate-400 hover:text-white hover:bg-slate-800">
-        📱 WhatsApp
+        ⚙️ Perfil da Empresa
       </button>
       <button onclick="switchTab('integracoes')" id="subnav-integracoes" class="subnav-pill text-xs px-3 py-1.5 rounded-full font-medium shrink-0 transition text-slate-400 hover:text-white hover:bg-slate-800">
         🔌 Webhooks
@@ -288,17 +276,23 @@
 
         <!-- Sub-abas da Configuração da Empresa -->
         <div class="flex items-center gap-2 border-b border-slate-800 pb-2 overflow-x-auto no-scrollbar">
-          <button type="button" onclick="switchCompanySubTab('perfil')" id="subtab-btn-perfil" class="company-subtab-btn text-xs px-3.5 py-1.5 rounded-lg font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 transition">
+          <button type="button" onclick="switchCompanySubTab('perfil')" id="subtab-btn-perfil" class="company-subtab-btn text-xs px-3.5 py-1.5 rounded-lg font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 transition shrink-0">
             🏢 Dados & IA
           </button>
-          <button type="button" onclick="switchCompanySubTab('servicos')" id="subtab-btn-servicos" class="company-subtab-btn text-xs px-3.5 py-1.5 rounded-lg font-semibold text-slate-400 hover:text-white hover:bg-slate-800 transition">
-            💆‍♀️ Procedimentos & Preços
+          <button type="button" onclick="switchCompanySubTab('servicos')" id="subtab-btn-servicos" class="company-subtab-btn text-xs px-3.5 py-1.5 rounded-lg font-semibold text-slate-400 hover:text-white hover:bg-slate-800 transition shrink-0">
+            💆‍♀️ Agenda de Preços & Pix
           </button>
-          <button type="button" onclick="switchCompanySubTab('agenda')" id="subtab-btn-agenda" class="company-subtab-btn text-xs px-3.5 py-1.5 rounded-lg font-semibold text-slate-400 hover:text-white hover:bg-slate-800 transition">
+          <button type="button" onclick="switchCompanySubTab('agenda')" id="subtab-btn-agenda" class="company-subtab-btn text-xs px-3.5 py-1.5 rounded-lg font-semibold text-slate-400 hover:text-white hover:bg-slate-800 transition shrink-0">
             🗓️ Horários da Maca
           </button>
-          <button type="button" onclick="switchCompanySubTab('whatsapp-hours')" id="subtab-btn-whatsapp-hours" class="company-subtab-btn text-xs px-3.5 py-1.5 rounded-lg font-semibold text-slate-400 hover:text-white hover:bg-slate-800 transition">
+          <button type="button" onclick="switchCompanySubTab('whatsapp-hours')" id="subtab-btn-whatsapp-hours" class="company-subtab-btn text-xs px-3.5 py-1.5 rounded-lg font-semibold text-slate-400 hover:text-white hover:bg-slate-800 transition shrink-0">
             📱 Expediente WhatsApp & Fila
+          </button>
+          <button type="button" onclick="switchCompanySubTab('persona-skill')" id="subtab-btn-persona-skill" class="company-subtab-btn text-xs px-3.5 py-1.5 rounded-lg font-semibold text-slate-400 hover:text-white hover:bg-slate-800 transition shrink-0">
+            🛡️ Regras de Persona & IA
+          </button>
+          <button type="button" onclick="switchCompanySubTab('whatsapp-conexoes')" id="subtab-btn-whatsapp-conexoes" class="company-subtab-btn text-xs px-3.5 py-1.5 rounded-lg font-semibold text-slate-400 hover:text-white hover:bg-slate-800 transition shrink-0">
+            📲 Conexão de WhatsApp
           </button>
         </div>
 
@@ -536,6 +530,81 @@
             </div>
           </div>
 
+          <!-- SUB-SEÇÃO 5: REGRAS DE PERSONA & GUARDRAILS DA IA (SKILL.md) -->
+          <div id="company-subtab-persona-skill" class="company-subtab-content hidden space-y-6">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 class="text-sm font-bold text-emerald-400">🛡️ Regras de Persona & Guardrails da IA (`SKILL.md`)</h3>
+                <p class="text-[11px] text-slate-400">
+                  Instruções comportamentais, tom de voz, regras de atendimento e limites de segurança da IA desta empresa.
+                </p>
+              </div>
+              <button type="button" onclick="saveCompanySkillDirect()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-4 py-2 rounded-lg transition shadow">
+                💾 Salvar Regras de Persona
+              </button>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              <div class="lg:col-span-8 space-y-2">
+                <label class="text-xs font-bold text-slate-300 block">
+                  📄 Conteúdo do `SKILL.md` (Injetado em todas as chamadas do Gemini desta empresa):
+                </label>
+                <textarea id="skill-editor-textarea" rows="16" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-4 text-xs text-slate-100 font-mono leading-relaxed focus:outline-none focus:border-emerald-500" placeholder="Carregando regras da empresa..."></textarea>
+              </div>
+
+              <!-- Roteiro de Perguntas Automáticas do Nicho -->
+              <div class="lg:col-span-4 bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
+                <h4 class="font-bold text-xs text-white">💬 Roteiro de Perguntas Naturais</h4>
+                <p class="text-slate-400 text-[11px]">
+                  Perguntas que o assistente conduz de forma invisível durante a conversa para alimentar a ficha do cliente:
+                </p>
+                <div id="skill-questions-preview" class="space-y-2 max-h-[380px] overflow-y-auto pr-1"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SUB-SEÇÃO 6: CONEXÃO DE WHATSAPP DA EMPRESA (BAILEYS SESSIONS & QR) -->
+          <div id="company-subtab-whatsapp-conexoes" class="company-subtab-content hidden space-y-6">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 class="text-sm font-bold text-sky-400">📲 Conexão de WhatsApp da Empresa</h3>
+                <p class="text-[11px] text-slate-400">
+                  Gerencie o aparelho conectado, visualize o QR Code, teste envio ou troque de número a qualquer momento.
+                </p>
+              </div>
+              <div class="flex items-center gap-2">
+                <button type="button" onclick="createNewInstanceDirect()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition shadow">
+                  + Nova Sessão / QR Code
+                </button>
+              </div>
+            </div>
+
+            <!-- Grade de Sessões e Teste de Disparo -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              <!-- Lista de Sessões / Cartão QR Code -->
+              <div id="instances-list" class="lg:col-span-7 space-y-4 text-xs"></div>
+
+              <!-- Painel de Envio de Mensagem Real -->
+              <div class="lg:col-span-5 bg-slate-950 border border-slate-800 rounded-xl p-5 space-y-4">
+                <h4 class="font-bold text-xs text-emerald-400">📤 Enviar Mensagem Real de Teste</h4>
+                <div class="space-y-3 text-xs">
+                  <div>
+                    <label class="block text-slate-400 mb-1">DDI + DDD + Telefone (ou JID):</label>
+                    <input id="direct-phone" placeholder="Ex: 5511974065584" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white" />
+                  </div>
+                  <div>
+                    <label class="block text-slate-400 mb-1">Mensagem:</label>
+                    <textarea id="direct-text" rows="3" placeholder="Digite a mensagem de teste..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-white"></textarea>
+                  </div>
+                  <button type="button" onclick="sendDirectWhatsAppDirect()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2 rounded-lg transition">
+                    Disparar Mensagem Agora
+                  </button>
+                  <div id="direct-status" class="text-xs text-emerald-300 hidden"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div class="flex justify-end pt-3 border-t border-slate-800">
             <button type="submit" class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-6 py-2.5 rounded-lg transition shadow-lg">
               💾 Salvar Todas as Configurações
@@ -582,91 +651,7 @@
       </section>
 
       <!-- ================================================================== -->
-      <!-- TELA 3: SKILL & GUARDRAILS POR EMPRESA (`SKILL.md`)                -->
-      <!-- ================================================================== -->
-      <section id="view-skills" class="tab-view hidden space-y-6">
-        <div class="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h1 class="text-xl font-bold text-white">🛡️ Skill & Guardrails de Segurança da Empresa</h1>
-            <p class="text-xs text-slate-400 mt-0.5">
-              Cada empresa possui sua própria Skill (Catálogo Oficial, Tom de Voz e Limites de Segurança sobre o que a IA pode ou nunca pode responder).
-            </p>
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <form onsubmit="saveCompanySkill(event)" class="lg:col-span-8 bg-slate-900 border border-slate-800 rounded-xl p-6 flex flex-col gap-4">
-            <div class="flex items-center justify-between">
-              <label class="text-sm font-bold text-emerald-400">
-                📄 Documento `SKILL.md` Ativo para esta Empresa:
-              </label>
-              <span class="text-[11px] text-slate-400">Injetado em todas as chamadas ao Gemini</span>
-            </div>
-            <textarea id="skill-editor-textarea" rows="18" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-4 text-xs text-slate-100 font-mono leading-relaxed focus:outline-none focus:border-emerald-500"></textarea>
-            <div class="flex justify-end">
-              <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-5 py-2.5 rounded-lg transition">
-                🛡️ Atualizar Skill & Guardrails da Empresa
-              </button>
-            </div>
-          </form>
-
-          <!-- Coluna Lateral: Perguntas Ativas do Nicho -->
-          <div class="lg:col-span-4 bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4 text-xs">
-            <div>
-              <h3 class="font-bold text-sm text-white">💬 Roteiro de Perguntas Naturais</h3>
-              <p class="text-slate-400 text-[11px] mt-0.5">
-                Perguntas que o assistente faz de forma invisível durante a conversa para montar a ficha:
-              </p>
-            </div>
-            <div id="skill-questions-preview" class="space-y-2.5"></div>
-          </div>
-        </div>
-      </section>
-
-      <!-- ================================================================== -->
-      <!-- TELA 4: CONEXÕES WHATSAPP & DISPARO DIRETO                         -->
-      <!-- ================================================================== -->
-      <section id="view-whatsapp" class="tab-view hidden space-y-6">
-        <div class="flex flex-wrap items-center justify-between gap-4 bg-slate-900 border border-slate-800 rounded-xl p-5">
-          <div>
-            <h1 class="text-xl font-bold text-white">📱 Sessões de WhatsApp (Baileys Multi-Sessão)</h1>
-            <p class="text-xs text-slate-400 mt-0.5">
-              Crie novas sessões, gere QR Code, troque de aparelho ou exclua sessões antigas a qualquer momento.
-            </p>
-          </div>
-          <form onsubmit="createNewInstance(event)" class="flex flex-wrap items-center gap-2">
-            <input id="new-instance-name" placeholder="Nome da sessão (ex: WhatsApp ADEN)" class="bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white w-64" />
-            <button type="submit" class="text-xs bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg font-semibold transition shadow">
-              + Criar Nova Sessão & Gerar QR Code
-            </button>
-          </form>
-        </div>
-
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div id="instances-list" class="lg:col-span-7 space-y-4 text-xs"></div>
-
-          <div class="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
-            <h3 class="font-bold text-sm text-emerald-400">📤 Enviar Mensagem Real pelo WhatsApp da Empresa</h3>
-            <form onsubmit="sendDirectWhatsApp(event)" class="space-y-3 text-xs">
-              <div>
-                <label class="block text-slate-400 mb-1">DDI + DDD + Telefone (ou JID):</label>
-                <input id="direct-phone" required placeholder="Ex: 5511974065584" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white" />
-              </div>
-              <div>
-                <label class="block text-slate-400 mb-1">Mensagem:</label>
-                <textarea id="direct-text" required rows="3" placeholder="Digite a mensagem..." class="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white"></textarea>
-              </div>
-              <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2 rounded-lg transition">
-                Disparar Mensagem Agora
-              </button>
-              <div id="direct-status" class="text-xs text-emerald-300 hidden"></div>
-            </form>
-          </div>
-        </div>
-      </section>
-
-      <!-- ================================================================== -->
-      <!-- TELA 5: CONSUMO GERAL & POR EMPRESA DE TOKENS (IA)                  -->
+      <!-- TELA 3: CONSUMO GERAL & POR EMPRESA DE TOKENS (IA)                  -->
       <!-- ================================================================== -->
       <section id="view-tokens" class="tab-view hidden space-y-6">
         <div class="flex flex-wrap items-center justify-between gap-4">
@@ -1264,15 +1249,62 @@
     }
 
     async function saveCompanySkill(e) {
-      e.preventDefault();
+      if (e && e.preventDefault) e.preventDefault();
       const skillMarkdown = document.getElementById('skill-editor-textarea').value;
       await fetch(`/api/v1/tenants/${selectedTenantId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ skillMarkdown })
       });
-      alert('🛡️ Skill e Guardrails de Segurança atualizados para esta empresa!');
+      alert('🛡️ Skill e Regras de Persona salvas com sucesso para esta empresa!');
       await loadAll();
+    }
+
+    async function saveCompanySkillDirect() {
+      await saveCompanySkill();
+    }
+
+    async function sendDirectWhatsAppDirect() {
+      const toPhone = document.getElementById('direct-phone').value;
+      const text = document.getElementById('direct-text').value;
+      const currentTenant = cachedTenants.find(t => t.id === selectedTenantId);
+      const statusEl = document.getElementById('direct-status');
+      statusEl.classList.remove('hidden');
+      statusEl.textContent = 'Enviando pelo WhatsApp da empresa...';
+
+      const res = await fetch('/api/v1/messages/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          instanceId: currentTenant?.whatsapp_instance_id || 'inst_principal',
+          toPhone,
+          text
+        })
+      }).then(r => r.json());
+
+      statusEl.textContent = res.delivered ? `✅ Mensagem entregue para ${toPhone}!` : `⚠️ Registrada no log.`;
+      document.getElementById('direct-text').value = '';
+    }
+
+    async function createNewInstanceDirect() {
+      const currentTenant = cachedTenants.find(t => t.id === selectedTenantId);
+      const defaultName = currentTenant ? `WhatsApp ${currentTenant.name}` : 'Nova Conexão WhatsApp';
+      const name = prompt('Nome para a conexão de WhatsApp:', defaultName);
+      if (!name) return;
+
+      await fetch('/api/v1/instances', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: name.trim(),
+          tenantId: selectedTenantId || undefined,
+          autoConnect: true
+        })
+      });
+
+      await loadAll();
+      setTimeout(loadAll, 1500);
+      setTimeout(loadAll, 3500);
     }
 
     async function confirmRecordPayment(recordId, customerName) {
