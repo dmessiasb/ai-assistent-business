@@ -785,7 +785,7 @@ export class ConversationOrchestrator {
     if (
       !isExplicitAttendanceReport &&
       (/^#agenda\b/i.test(lower) ||
-        /\b(agenda|agendad[oa]s?|agendamentos?|quais\s+(?:os\s+)?atendimentos?|atendimentos?\s+(?:previstos?|d[ae]\s+semana|para\s+a\s+semana|que\s+tenho|de\s+hoje|de\s+amanh[aã])|tenho\s+para\s+a\s+semana|quem\s+(?:eu\s+)?atendo|hor[aá]rios?\s+marcad|pr[oó]ximos?\s+atendimentos?)\b/i.test(
+        /\b(agenda|agendad[oa]s?|agendamentos?|quais\s+(?:os\s+|meus\s+)?(?:atendimentos?|clientes?|pacientes?)|atendimentos?\s+(?:previstos?|d[ae]\s+semana|para\s+a\s+semana|que\s+tenho|de\s+hoje|de\s+amanh[aã])|tenho\s+para\s+a\s+semana|quem\s+(?:eu\s+)?atendo|hor[aá]rios?\s+marcad|pr[oó]ximos?\s+(?:atendimentos?|clientes?|pacientes?)|pr[oó]xima\s+semana)\b/i.test(
           lower
         ))
     ) {
@@ -892,7 +892,15 @@ export class ConversationOrchestrator {
       };
     }
 
-    // 4. QUARTO: Se não for comando de Pós-Atendimento, fica em silêncio no chat pessoal
+    // 4. QUARTO: Se for saudação casual (#prof boa noite, oi, olá), responde educadamente auxiliando a profissional
+    if (/\b(boa\s+noite|bom\s+dia|boa\s+tarde|ol[aá]|oi|oie)\b/i.test(lower) && cleanText.length < 30) {
+      return {
+        mode: 'PROFESSIONAL_QUERY',
+        replyMessage: `Olá! Sou seu assistente de atendimento da *${config.tenantName}*.\n\nVocê pode me pedir:\n• *Quais são meus clientes da próxima semana?* (ou *#agenda*)\n• *#ficha Nome* (para consultar histórico de um cliente)\n• *Atendi o cliente Nome, fez massagem...* (para registrar evolução e agendar pós-atendimento)\n• *#relatorio* (para ver faturamento e métricas)`,
+      };
+    }
+
+    // Se não for comando de Pós-Atendimento nem consulta, fica em silêncio
     if (!isExplicitAttendanceReport) {
       return {
         mode: 'IGNORED_CASUAL',

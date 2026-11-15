@@ -1159,12 +1159,13 @@
         outOfHoursMessage: document.getElementById('emp-wa-out-message').value,
       };
 
+      const currentTenant = cachedTenants.find(t => t.id === selectedTenantId);
       const payload = {
         name: document.getElementById('emp-name').value,
         verticalPresetId: document.getElementById('emp-preset').value,
         aiApiKey: document.getElementById('emp-ai-key').value,
         aiModel: document.getElementById('emp-ai-model').value,
-        whatsappInstanceId: document.getElementById('emp-wa-instance')?.value || null,
+        whatsappInstanceId: currentTenant?.whatsapp_instance_id || null,
         ownerPhone: document.getElementById('emp-owner-phone').value,
         securityMode: document.getElementById('emp-sec-mode').value,
         allowedTestJids: document.getElementById('emp-allowed-jids').value,
