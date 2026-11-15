@@ -1057,7 +1057,8 @@
         document.getElementById('emp-preset').value = tenant.vertical_preset_id || 'massoterapia_estetica';
         document.getElementById('emp-ai-key').value = tenant.ai_api_key || '';
         document.getElementById('emp-ai-model').value = tenant.ai_model || 'gemini-3.8-flash';
-        document.getElementById('emp-wa-instance').value = tenant.whatsapp_instance_id || (cachedInstances[0]?.id || '');
+        const empWaInstance = document.getElementById('emp-wa-instance');
+        if (empWaInstance) empWaInstance.value = tenant.whatsapp_instance_id || (cachedInstances[0]?.id || '');
         document.getElementById('emp-owner-phone').value = tenant.owner_phone || '';
         document.getElementById('emp-sec-mode').value = tenant.security_mode || 'TEST_WHITELIST';
         document.getElementById('emp-require-pix').value = tenant.require_down_payment ? '1' : '0';
@@ -1163,7 +1164,7 @@
         verticalPresetId: document.getElementById('emp-preset').value,
         aiApiKey: document.getElementById('emp-ai-key').value,
         aiModel: document.getElementById('emp-ai-model').value,
-        whatsappInstanceId: document.getElementById('emp-wa-instance').value || null,
+        whatsappInstanceId: document.getElementById('emp-wa-instance')?.value || null,
         ownerPhone: document.getElementById('emp-owner-phone').value,
         securityMode: document.getElementById('emp-sec-mode').value,
         allowedTestJids: document.getElementById('emp-allowed-jids').value,
@@ -1348,14 +1349,12 @@
       ).join('');
 
       // Selects internos da aba Empresas
-      document.getElementById('emp-preset').innerHTML = cachedPresets.map(p =>
-        `<option value="${p.id}">${p.name}</option>`
-      ).join('');
-      document.getElementById('emp-wa-instance').innerHTML = cachedInstances.length === 0
-        ? `<option value="">(Nenhuma sessão ativa — crie na aba Conexões WhatsApp)</option>`
-        : cachedInstances.map(i =>
-            `<option value="${i.id}">${i.name} (${i.id} - ${i.status})</option>`
-          ).join('');
+      const empPreset = document.getElementById('emp-preset');
+      if (empPreset) {
+        empPreset.innerHTML = cachedPresets.map(p =>
+          `<option value="${p.id}">${p.name}</option>`
+        ).join('');
+      }
 
       // Badges da empresa ativa no topo
       if (currentTenant) {
