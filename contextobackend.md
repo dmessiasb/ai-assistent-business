@@ -631,3 +631,20 @@ Identificada e corrigida a causa raiz que impedia o preenchimento automático da
 - **Causa Raiz:** Na refatoração anterior que isolou as sessões de WhatsApp em sua própria sub-aba, o elemento `<select id="emp-wa-instance">` foi substituído pelo card dinâmico de instâncias, porém a função `populateCompanyForms()` continuava tentando acessar `document.getElementById('emp-wa-instance').value`. Esse acesso a propriedade de elemento `null` gerava um `TypeError` silencioso no JavaScript do navegador, abortando a execução antes de carregar o catálogo de serviços (`renderServicesEditorTable`), as regras de IA (`SKILL.md`) e os horários da agenda.
 - **Correção:** Adicionada verificação segura de existência do elemento (`const empWaInstance = document.getElementById('emp-wa-instance'); if (empWaInstance) ...`) nas funções `populateCompanyForms()` e `saveCompanyProfile()`.
 - **Resultado:** A tela agora preenche 100% dos dados cadastrais, regras de persona, catálogo de procedimentos/valores e agenda de forma instantânea.
+
+
+## [2026-11-15] Fase 34 - Diagnóstico de Comandos da Profissional via WhatsApp e Regras de Horário de Expediente
+Análise detalhada do fluxo de atendimento e horário de funcionamento:
+1. **Validação de Horário de Atendimento vs. Profissional:**
+   - Comprovado através de análise do orquestrador (`src/records/conversation.orchestrator.ts`) que mensagens e comandos enviados pela dona/profissional (`#prof`, `#agenda`, `#ficha`, `#atendi`, `#confirmar`, etc., ou mensagens originadas do número pessoal cadastrado como `ownerPhone`) são processados **imediatamente na camada prioritária (linhas 96–112)**, **antes** de qualquer checagem de horário de expediente (`isWithinWhatsAppSupportHours`, linha 182).
+   - Portanto, a regra de expediente do WhatsApp **não bloqueia e nunca bloqueou** os comandos enviados pela própria profissional.
+
+2. **Causa Raiz da Falta de Retorno na Mensagem:**
+   - A profissional enviou a consulta: `"#prof Quais são meus clientes da próxima semana ?"`.
+   - O analisador de intenções da profissional (`handleProfessionalMessage`) utilizava uma expressão regular restrita que buscava especificamente termos como `agenda`, `agendados`, `atendimentos que tenho`, etc., não prevendo a combinação de `"clientes"` com `"próxima semana"`.
+   - Por não casar com os comandos conhecidos nem com registro de atendimento, a mensagem caiu na regra de silêncio para conversas casuais (`IGNORED_CASUAL`) retornando resposta em branco. Da mesma forma, saudações como `"#prof Boa noite"` eram ignoradas com silêncio.
+
+3. **Aprimoramento do Parser de Comandos da Profissional ([conversation.orchestrator.ts](file:///c:/_dev/atendimento_whatsapp/src/records/conversation.orchestrator.ts)):**
+   - Expandido o padrão de agenda para reconhecer variações como: `clientes`, `pacientes`, `quais são meus clientes`, `atendimentos previstos`, `próxima semana`.
+   - Adicionada resposta amigável para saudações casuais (`#prof boa noite`, `bom dia`, etc.), orientando a profissional com o menu de comandos disponíveis caso ela envie uma saudação.
+   - Preservação intacta do salvamento de `whatsappInstanceId` no perfil da empresa em `public/index.html`.
