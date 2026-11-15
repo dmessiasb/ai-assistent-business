@@ -624,3 +624,10 @@ Implementado isolamento estrito para garantir que na tela **Perfil da Empresa** 
    - A chamada `fetch('/api/v1/instances?tenantId=...')` passa a respeitar a empresa selecionada no seletor global (`🏢 Empresa Ativa`).
    - A renderização da sub-aba **"📲 Conexão de WhatsApp"** agora exibe exclusivamente o card de WhatsApp daquela empresa com seu respectivo QR Code, status de conexão e botão para criar/reconectar.
    - Removido o seletor misturado de instâncias que permitia ver ou vincular sessões de terceiros acidentalmente.
+
+
+## [2026-11-14] Correção de Renderização do Perfil da Empresa no Frontend
+Identificada e corrigida a causa raiz que impedia o preenchimento automático das informações da empresa na tela "Perfil da Empresa":
+- **Causa Raiz:** Na refatoração anterior que isolou as sessões de WhatsApp em sua própria sub-aba, o elemento `<select id="emp-wa-instance">` foi substituído pelo card dinâmico de instâncias, porém a função `populateCompanyForms()` continuava tentando acessar `document.getElementById('emp-wa-instance').value`. Esse acesso a propriedade de elemento `null` gerava um `TypeError` silencioso no JavaScript do navegador, abortando a execução antes de carregar o catálogo de serviços (`renderServicesEditorTable`), as regras de IA (`SKILL.md`) e os horários da agenda.
+- **Correção:** Adicionada verificação segura de existência do elemento (`const empWaInstance = document.getElementById('emp-wa-instance'); if (empWaInstance) ...`) nas funções `populateCompanyForms()` e `saveCompanyProfile()`.
+- **Resultado:** A tela agora preenche 100% dos dados cadastrais, regras de persona, catálogo de procedimentos/valores e agenda de forma instantânea.
